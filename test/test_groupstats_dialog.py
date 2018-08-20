@@ -14,11 +14,11 @@ __copyright__ = 'Copyright 2018, Basil Eric Rabi'
 
 import unittest
 
-from PyQt5.QtGui import QDialogButtonBox, QDialog
+from PyQt5.QtWidgets import QDialog, QDialogButtonBox
 
 from groupstats_dialog import GroupStatsDialog
 
-from utilities import get_qgis_app
+from .utilities import get_qgis_app
 QGIS_APP = get_qgis_app()
 
 
@@ -52,4 +52,3 @@ if __name__ == "__main__":
     suite = unittest.makeSuite(GroupStatsDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
-
