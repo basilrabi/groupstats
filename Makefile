@@ -44,15 +44,17 @@ PLUGINNAME = groupstats
 
 PY_FILES = \
 	__init__.py \
-	groupstats.py groupstats_dialog.py
+	$(PLUGINNAME).py $(PLUGINNAME)_dialog.py
 
-UI_FILES = groupstats_dialog_base.ui
+UI_FILES = $(PLUGINNAME).ui
 
 EXTRAS = metadata.txt icon.png
 
-EXTRA_DIRS =
+EXTRA_DIRS = icons
 
 COMPILED_RESOURCE_FILES = resources.py
+
+COMPILED_UI_FILES = $(PLUGINNAME)_ui.py
 
 PEP8EXCLUDE = pydev,resources.py,conf.py,third_party,ui
 
@@ -71,19 +73,22 @@ QGISDIR = .local/share/QGIS/QGIS3/profiles/default
 
 default : compile
 
-compile : $(COMPILED_RESOURCE_FILES)
+compile : $(COMPILED_RESOURCE_FILES) $(COMPILED_UI_FILES)
 
-%.py : %.qrc $(RESOURCES_SRC)
+%.py : %.qrc
 	pyrcc5 -o $*.py  $<
+
+%_ui.py : %.ui
+	pyuic5 -o $*_ui.py $<
 
 %.qm : %.ts
 	$(LRELEASE) $<
 
 deploy : compile doc transcompile
 	@echo
-	@echo "------------------------------------------"
-	@echo "Deploying plugin to your .qgis2 directory."
-	@echo "------------------------------------------"
+	@echo "------------------------------------------------"
+	@echo "Deploying plugin to your qgis3 plugin directory."
+	@echo "------------------------------------------------"
 	# The deploy  target only works on unix like operating system where
 	# the Python plugin directory is located at:
 	# $HOME/$(QGISDIR)/python/plugins
@@ -91,6 +96,7 @@ deploy : compile doc transcompile
 	cp -vf $(PY_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vf $(UI_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vf $(COMPILED_RESOURCE_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
+	cp -vf $(COMPILED_UI_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vf $(EXTRAS) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr i18n $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr $(HELP) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)/help
@@ -175,7 +181,7 @@ clean:
 	@echo "------------------------------------"
 	@echo "Removing uic and rcc generated files"
 	@echo "------------------------------------"
-	rm $(COMPILED_UI_FILES) $(COMPILED_RESOURCE_FILES)
+	rm -f $(COMPILED_UI_FILES) $(COMPILED_RESOURCE_FILES)
 
 doc:
 	@echo

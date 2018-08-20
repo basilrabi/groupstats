@@ -27,11 +27,13 @@ import os
 from PyQt5 import uic
 from PyQt5 import QtWidgets
 
+from .groupstats_ui import Ui_GroupStatsDialog
+
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'groupstats_dialog_base.ui'))
+    os.path.dirname(__file__), 'groupstats.ui'))
 
 
-class GroupStatsDialog(QtWidgets.QDialog, FORM_CLASS):
+class GroupStatsDialog(QtWidgets.QMainWindow, FORM_CLASS):
     """
     Plugin dialog.
     """

@@ -2,4 +2,5 @@
 .coverage
 .noseids
 .vscode
+groupstats_ui.py
 resources.py
