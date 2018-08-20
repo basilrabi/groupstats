@@ -54,7 +54,7 @@ EXTRA_DIRS =
 
 COMPILED_RESOURCE_FILES = resources.py
 
-PEP8EXCLUDE=pydev,resources.py,conf.py,third_party,ui
+PEP8EXCLUDE = pydev,resources.py,conf.py,third_party,ui
 
 
 #################################################
@@ -65,13 +65,13 @@ HELP = help/build/html
 
 PLUGIN_UPLOAD = $(c)/plugin_upload.py
 
-RESOURCE_SRC=$(shell grep '^ *<file' resources.qrc | sed 's@</file>@@g;s/.*>//g' | tr '\n' ' ')
+RESOURCE_SRC = $(shell grep '^ *<file' resources.qrc | sed 's@</file>@@g;s/.*>//g' | tr '\n' ' ')
 
-QGISDIR=.qgis2
+QGISDIR = .local/share/QGIS/QGIS3/profiles/default
 
-default: compile
+default : compile
 
-compile: $(COMPILED_RESOURCE_FILES)
+compile : $(COMPILED_RESOURCE_FILES)
 
 %.py : %.qrc $(RESOURCES_SRC)
 	pyrcc5 -o $*.py  $<
@@ -79,7 +79,7 @@ compile: $(COMPILED_RESOURCE_FILES)
 %.qm : %.ts
 	$(LRELEASE) $<
 
-test: compile transcompile
+test : compile transcompile
 	@echo
 	@echo "----------------------"
 	@echo "Regression Test Suite"
@@ -97,7 +97,7 @@ test: compile transcompile
 	@echo "e.g. source run-env-linux.sh <path to qgis install>; make test"
 	@echo "----------------------"
 
-deploy: compile doc transcompile
+deploy : compile doc transcompile
 	@echo
 	@echo "------------------------------------------"
 	@echo "Deploying plugin to your .qgis2 directory."
@@ -134,7 +134,7 @@ derase:
 	@echo "-------------------------"
 	rm -Rf $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 
-zip: deploy dclean
+zip : deploy dclean
 	@echo
 	@echo "---------------------------"
 	@echo "Creating plugin zip bundle."
@@ -144,7 +144,7 @@ zip: deploy dclean
 	rm -f $(PLUGINNAME).zip
 	cd $(HOME)/$(QGISDIR)/python/plugins; zip -9r $(CURDIR)/$(PLUGINNAME).zip $(PLUGINNAME)
 
-package: compile
+package : compile
 	# Create a zip package of the plugin named $(PLUGINNAME).zip.
 	# This requires use of git (your plugin development directory must be a
 	# git repository).
@@ -158,7 +158,7 @@ package: compile
 	git archive --prefix=$(PLUGINNAME)/ -o $(PLUGINNAME).zip $(VERSION)
 	echo "Created package: $(PLUGINNAME).zip"
 
-upload: zip
+upload : zip
 	@echo
 	@echo "-------------------------------------"
 	@echo "Uploading plugin to QGIS Plugin repo."
