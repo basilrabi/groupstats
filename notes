@@ -13,8 +13,6 @@ What's Next:
 
   * Compile the resources file using pyrcc5
 
-  * Run the tests (``make test``)
-
   * Test the plugin by enabling it in the QGIS plugin manager
 
   * Customize it by editing the implementation file: ``groupstats.py``
