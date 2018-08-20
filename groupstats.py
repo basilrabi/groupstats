@@ -21,15 +21,16 @@
  *                                                                         *
  ***************************************************************************/
 """
+import os.path
+
 from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QAction
 
 # Initialize Qt resources from file resources.py
-from .resources import *
+from . import resources  # pylint: disable=W0611
 # Import the code for the dialog
 from .groupstats_dialog import GroupStatsDialog
-import os.path
 
 
 class GroupStats:
@@ -67,7 +68,6 @@ class GroupStats:
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&Group Statistics')
-        # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'GroupStats')
         self.toolbar.setObjectName(u'GroupStats')
 
@@ -86,18 +86,17 @@ class GroupStats:
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('GroupStats', message)
 
-
     def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
+            self,
+            icon_path,
+            text,
+            callback,
+            enabled_flag=True,
+            add_to_menu=True,
+            add_to_toolbar=True,
+            status_tip=None,
+            whats_this=None,
+            parent=None):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -170,7 +169,6 @@ class GroupStats:
             callback=self.run,
             parent=self.iface.mainWindow())
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -180,7 +178,6 @@ class GroupStats:
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
-
 
     def run(self):
         """Run method that performs all the real work"""

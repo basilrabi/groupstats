@@ -32,6 +32,10 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 
 class GroupStatsDialog(QtWidgets.QDialog, FORM_CLASS):
+    """
+    Plugin dialog.
+    """
+
     def __init__(self, parent=None):
         """Constructor."""
         super(GroupStatsDialog, self).__init__(parent)
