@@ -22,28 +22,18 @@
  ***************************************************************************/
 """
 
-import os
-
-from PyQt5 import uic
-from PyQt5 import QtWidgets
+from qgis.PyQt.QtWidgets import QMainWindow
 
 from .groupstats_ui import Ui_GroupStatsDialog
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'groupstats.ui'))
 
-
-class GroupStatsDialog(QtWidgets.QMainWindow, FORM_CLASS):
+class GroupStatsDialog(QMainWindow):
     """
     Plugin dialog.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self):
         """Constructor."""
-        super(GroupStatsDialog, self).__init__(parent)
-        # Set up the user interface from Designer.
-        # After setupUI you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://qt-project.org/doc/qt-4.8/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
-        self.setupUi(self)
+        super().__init__()
+        self.ui = Ui_GroupStatsDialog()
+        self.ui.setupUi(self)
