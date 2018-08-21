@@ -2,49 +2,31 @@
 # GroupStats
 #
 # Summary statistics for vector layers data
-#							 -------------------
-#		begin				: 2018-08-20
-#		git sha				: $Format:%H$
-#		copyright			: (C) 2018 by Basil Eric Rabi
-#		email				: ericbasil.rabi@gmail.com
+#                             -------------------
+#       begin               : 2018-08-20
+#       git sha             : $Format:%H$
+#       copyright           : (C) 2018 by Basil Eric Rabi
+#       email               : ericbasil.rabi@gmail.com
 # ***************************************************************************/
 #
 #/***************************************************************************
-# *																		 *
+# *                                                                         *
 # *   This program is free software; you can redistribute it and/or modify  *
 # *   it under the terms of the GNU General Public License as published by  *
-# *   the Free Software Foundation; either version 2 of the License, or	 *
-# *   (at your option) any later version.								   *
-# *																		 *
+# *   the Free Software Foundation; either version 2 of the License, or     *
+# *   (at your option) any later version.                                   *
+# *                                                                         *
 # ***************************************************************************/
 
-#################################################
-# Edit the following to match your sources lists
-#################################################
-
-
-#Add iso code for any locales you want to support here (space separated)
-# default is no locales
-# LOCALES = af
 LOCALES =
 
-# If locales are enabled, set the name of the lrelease binary on your system. If
-# you have trouble compiling the translations, you may have to specify the full path to
-# lrelease
-#LRELEASE = lrelease
-#LRELEASE = lrelease-qt4
+VERSION = $(shell awk -F= '/^version/{print $$2}' metadata.txt)
 
-
-# translation
-SOURCES = \
-	__init__.py \
-	groupstats.py groupstats_dialog.py
+SOURCES = __init__.py groupstats.py groupstats_dialog.py
 
 PLUGINNAME = groupstats
 
-PY_FILES = \
-	__init__.py \
-	$(PLUGINNAME).py $(PLUGINNAME)_dialog.py
+PY_FILES = __init__.py $(PLUGINNAME).py $(PLUGINNAME)_dialog.py
 
 UI_FILES = $(PLUGINNAME).ui
 
@@ -58,16 +40,11 @@ COMPILED_UI_FILES = $(PLUGINNAME)_ui.py
 
 PEP8EXCLUDE = pydev,resources.py,conf.py,third_party,ui
 
-
-#################################################
-# Normally you would not need to edit below here
-#################################################
-
 HELP = help/build/html
 
 PLUGIN_UPLOAD = $(c)/plugin_upload.py
 
-RESOURCE_SRC = $(grep '^ *<file' resources.qrc | sed 's@</file>@@g;s/.*>//g' | tr '\n' ' ')
+RESOURCE_SRC = $(shell grep '^ *<file' resources.qrc | sed 's@</file>@@g;s/.*>//g' | tr '\n' ' ')
 
 QGISDIR = .local/share/QGIS/QGIS3/profiles/default
 
@@ -89,9 +66,6 @@ deploy : compile doc transcompile
 	@echo "------------------------------------------------"
 	@echo "Deploying plugin to your qgis3 plugin directory."
 	@echo "------------------------------------------------"
-	# The deploy  target only works on unix like operating system where
-	# the Python plugin directory is located at:
-	# $HOME/$(QGISDIR)/python/plugins
 	mkdir -p $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vf $(PY_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vf $(UI_FILES) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
@@ -100,12 +74,8 @@ deploy : compile doc transcompile
 	cp -vf $(EXTRAS) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr i18n $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)
 	cp -vfr $(HELP) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)/help
-	# Copy extra directories if any
 	$(foreach EXTRA_DIR,$(EXTRA_DIRS),cp -R $(EXTRA_DIR) $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME)/;)
 
-
-# The dclean target removes compiled python files from plugin directory
-# also deletes any .git entry
 dclean:
 	@echo
 	@echo "-----------------------------------"
@@ -113,7 +83,6 @@ dclean:
 	@echo "-----------------------------------"
 	find $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME) -iname "*.pyc" -delete
 	find $(HOME)/$(QGISDIR)/python/plugins/$(PLUGINNAME) -iname ".git" -prune -exec rm -Rf {} \;
-
 
 derase:
 	@echo
@@ -127,17 +96,10 @@ zip : deploy dclean
 	@echo "---------------------------"
 	@echo "Creating plugin zip bundle."
 	@echo "---------------------------"
-	# The zip target deploys the plugin and creates a zip file with the deployed
-	# content. You can then upload the zip file on http://plugins.qgis.org
 	rm -f $(PLUGINNAME).zip
 	cd $(HOME)/$(QGISDIR)/python/plugins; zip -9r $(CURDIR)/$(PLUGINNAME).zip $(PLUGINNAME)
 
 package : compile
-	# Create a zip package of the plugin named $(PLUGINNAME).zip.
-	# This requires use of git (your plugin development directory must be a
-	# git repository).
-	# To use, pass a valid commit or tag as follows:
-	#   make package VERSION=Version_0.3.2
 	@echo
 	@echo "------------------------------------"
 	@echo "Exporting plugin to zip package.	"
@@ -203,9 +165,6 @@ pylint:
 	@echo "e.g. source run-env-linux.sh <path to qgis install>; make pylint"
 	@echo "----------------------"
 
-
-# Run pep8 style checking
-#http://pypi.python.org/pypi/pep8
 pep8:
 	@echo
 	@echo "-----------"
