@@ -22,7 +22,8 @@
  ***************************************************************************/
 """
 
-from qgis.PyQt.QtWidgets import QMainWindow
+from qgis.PyQt.QtCore import QItemSelectionModel, Qt
+from qgis.PyQt.QtWidgets import QMainWindow, QTableView  # , QWidget
 
 from .groupstats_ui import Ui_GroupStatsDialog
 
@@ -35,5 +36,52 @@ class GroupStatsDialog(QMainWindow):
     def __init__(self):
         """Constructor."""
         super().__init__()
+        # QWidget.__init__(self)
         self.ui = Ui_GroupStatsDialog()
         self.ui.setupUi(self)
+
+
+class ResultsWindow(QTableView):
+    """
+    Window with calculation results.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.setSortingEnabled(True)
+        self.setObjectName('results')
+        self.verticalHeader().setSortIndicatorShown(True)
+        self.clicked.connect(self.checkAll)
+
+    def selectionCommand(self, index, event=None):
+        """
+        Adds selection of entire rows and columns when the table header is
+        selected
+        """
+        # http://doc.qt.io/qt-5/qabstractitemview.html#selectionCommand
+        # http://doc.qt.io/qt-5/qitemselectionmodel.html#SelectionFlag-enum
+        flag = super().selectionCommand(index, event)
+
+        selected_cell_type = self.model().data(index, Qt.UserRole + 1)
+
+        # TODO: Find out the purpose of the binary OR "|" operator
+        if selected_cell_type == 'row':
+            return flag | QItemSelectionModel.Rows
+        elif selected_cell_type == 'column':
+            return flag | QItemSelectionModel.Columns
+        else:
+            return flag
+
+    def checkAll(self, index):
+        """
+        Select or deselect all data after clicking on the corner of the table.
+        """
+        selected_cell_type = self.model().data(index, Qt.UserRole + 1)
+
+        # Check if the corner is celected
+        if selected_cell_type not in ['data', 'row', 'column']:
+            # If the corner is selected, mark all data
+            if self.selectionModel().isSelected(index):
+                self.selectAll()
+            else:
+                self.clearSelection()
