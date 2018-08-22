@@ -22,10 +22,123 @@
  ***************************************************************************/
 """
 
-from qgis.PyQt.QtCore import QItemSelectionModel, Qt
-from qgis.PyQt.QtWidgets import QMainWindow, QTableView  # , QWidget
+from math import sqrt
+from qgis.PyQt.QtCore import (QAbstractTableModel,
+                              QCoreApplication,
+                              QItemSelectionModel,
+                              QObject,
+                              Qt)
+from qgis.PyQt.QtGui import QBrush, QColor, QFont
+from qgis.PyQt.QtWidgets import QMainWindow, QTableView
 
 from .groupstats_ui import Ui_GroupStatsDialog
+
+
+class Calculation(QObject):
+    """
+    A class containing functions that perform statistical computations.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # List of ID, name and calculation function
+        self.list = {
+            0: (QCoreApplication.translate(
+                'Calculation', 'count'
+            ), self.count),
+            1: (QCoreApplication.translate(
+                'Calculation', 'sum'
+            ), self.sum),
+            2: (QCoreApplication.translate(
+                'Calculation', 'mean'
+            ), self.mean),
+            3: (QCoreApplication.translate(
+                'Calculation', 'variance'
+            ), self.variance),
+            4: (QCoreApplication.translate(
+                'Calculation', 'standard_deviation'
+            ), self.standard_deviation),
+            5: (QCoreApplication.translate(
+                'Calculation', 'median'
+            ), self.median),
+            6: (QCoreApplication.translate(
+                'Calculation', 'minimum'
+            ), self.minimum),
+            7: (QCoreApplication.translate(
+                'Calculation', 'maximum'
+            ), self.maximum),
+            8: (QCoreApplication.translate(
+                'Calculation', 'unique'
+            ),),
+        }
+        self.listText = (0, 8)
+        self.textName = ''
+        for i in self.listText:
+            self.textName = self.textName + self.list[i][0] + ', '
+        self.textName = self.textName[:-2]
+
+    def count(self, result):
+        """
+        Number of matching rows.
+        """
+        return len(result)
+
+    def maximum(self, result):
+        """
+        Maximum value in the result.
+        """
+        return max(result)
+
+    def mean(self, result):
+        """
+        Average of the given set of results.
+        """
+        return self.sum(result) / self.count(result)
+
+    def median(self, result):
+        """
+        Median of values.
+        """
+        result.sort()
+        count = self.count(result)
+        if count == 1:
+            median = result[0]
+        else:
+            position = count / 2
+            if count % 2 == 0:
+                median = (result[position] + result[position - 1]) / 2
+            else:
+                median = result[count]
+
+        return median
+
+    def minimum(self, result):
+        """
+        Minimum value in the result.
+        """
+        return min(result)
+
+    def standard_deviation(self, result):
+        """
+        Population's standard deviation.
+        """
+        return sqrt(self.variance(result))
+
+    def sum(self, result):
+        """
+        Summation of results.
+        """
+        return sum(result)
+
+    def variance(self, result):
+        """
+        Population's variance.
+        """
+        variance = 0
+        for x in result:
+            variance = variance + (x - self.mean(result))**2
+        return variance / self.count(result)
 
 
 class GroupStatsDialog(QMainWindow):
@@ -39,6 +152,247 @@ class GroupStatsDialog(QMainWindow):
         # QWidget.__init__(self)
         self.ui = Ui_GroupStatsDialog()
         self.ui.setupUi(self)
+
+
+class ResultsModel(QAbstractTableModel):
+    """
+    Model for the window with the results of calculations.
+    """
+
+    def __init__(self, data, rows, columns, layer):
+        super().__init__()
+        self.data = data
+        self.rows = rows
+        self.columns = columns
+        self.layer = layer
+
+        # Shift coordinates so the data starts at (0, 0)
+        self.offsetX = max(1, len(rows[0]))
+        self.offsetY = max(1, len(columns[0]))
+
+        # Offset column to make room for row names
+        if rows[0] and columns[0]:
+            self.offsetY = self.offsetY + 1
+
+    def cell(self, index, role=Qt.DisplayRole):
+        """
+        Returns data from the table cell?
+        """
+        if not index.isValid() or not 0 <= index.row() < self.row_count():
+            return None
+
+        row = index.row() - self.offsetY
+        column = index.column() - self.offsetX
+
+        if role == Qt.DisplayRole:
+            # Table cell data
+            if row >= 0 and column >= 0:
+                return self.data[row][column][0]
+            # Row descriptions?
+            elif column < 0 and row >= 0 and self.rows[0]:
+                return self.rows[row + 1][column]
+            # Row title field?
+            elif row == -1 and column < 0 and self.rows[0]:
+                return self.rows[0][column]
+            # Column description and names?
+            elif column >= -1 and row < 0 and self.columns[0]:
+                if self.rows[0]:
+                    # Break line?
+                    if row == -1:
+                        return ''
+                    # Descriptions and column names if there is a break line?
+                    else:
+                        return self.columns[column + 1][row + 1]
+                # Column descriptions and names if there is no break line?
+                return self.columns[column + 1][row]
+
+        elif role == Qt.UserRole:
+            if row >= 0 and column >= 0:
+                return self.data[row][column][1]
+
+        elif role == Qt.UserRole + 1:
+            if row < 0 and column >= 0:
+                return 'column'
+            elif row >= 0 and column < 0:
+                return 'row'
+            elif row >= 0 and column >= 0:
+                return 'data'
+
+        # Cell filling
+        elif role == Qt.BackgroundRole:
+            if row < 0 or column < 0:
+                # Gray for cells with descriptions and names
+                color = QColor(245, 235, 235)
+                brush = QBrush(color)
+                return brush
+
+        elif role == Qt.TextAlignmentRole:
+            if column < 0 and row < -1 and self.rows:
+                return Qt.AlignRight | Qt.AlignVCenter
+            elif column >= 0 and row < 0:
+                return Qt.AlignHCenter | Qt.AlignVCenter
+            elif column >= 0 and row >= 0:
+                return Qt.AlignRight | Qt.AlignVCenter
+
+        elif role == Qt.FontRole:
+            if row < 0 and column < 0:
+                font = QFont()
+                font.setBold(True)
+                return font
+
+        return None
+
+    def column_cout(self):
+        """
+        Count the number of columns?
+        """
+        if self.rows[0] and self.columns[0]:
+            l = len(self.rows[0]) + len(self.columns[0])
+        elif self.rows[0] and not self.columns[0]:
+            l = len(self.rows[0]) + 1
+        elif not self.rows[0] and self.columns[0]:
+            l = len(self.columns[0])
+        else:
+            l = 2
+
+        return l
+
+    def row_count(self):
+        """
+        Count the number of rows?
+        """
+        return max(2, len(self.rows) + len(self.columns[0]))
+
+    def sortColumn(self, column, mode=0):
+        """
+        Sorts the table according to the selected column.
+        Mode is a flag whether to sort descending.
+        """
+        if len(self.rows) == 1:
+            return
+
+        # A temporary list for a sorted column
+        tmp = []
+
+        # If 1 column?
+        # Select data for sorting
+        if column >= self.offsetX:
+            # n : n-th row
+            # d : data in row
+            for n, d in enumerate(self.data):
+                tmp.append((n, d[column - self.offsetX][0]))
+        else:
+            # Sort row names
+            for n, d in enumerate(self.rows[1:]):
+                # Change numbers in characters to float.
+                # This is to correctly sort numbers.
+                parsed = False
+                if not isinstance(d[column], float):
+                    try:
+                        number = float(d[column])
+                    except ValueError:
+                        pass
+                    else:
+                        parsed = True
+
+                if parsed:
+                    tmp.append((n, number))
+                else:
+                    tmp.append((n, d[column]))
+
+        # Sort ascending
+        tmp.sort(key=lambda x: x[1])
+        if mode:
+            # Sort descending
+            tmp.reverse()
+
+        # Temporarily store data
+        data2 = tuple(self.data)
+        # Temporarily store row data
+        rows2 = tuple(self.rows)
+
+        self.data = []
+        self.rows = []
+        # Add row names only
+        self.rows.append(rows2[0])
+
+        # Arrange all data and row descriptions using the sorted list
+        for i in tmp:
+            self.data.append(data2[i[0]])
+            self.rows.append(rows2[i[0] + 1])
+
+        # Data change signal
+        top_left = self.createIndex(0, 0)
+        bottom_right = self.createIndex(self.row_count(), self.column_cout())
+        self.dataChanged(top_left, bottom_right)
+
+    def sortRow(self, row, mode=0):
+        """
+        Sorts the table according to the selected row.
+        Mode is a flag whether to sort descending.
+        """
+        if len(self.rows) == 1:
+            return
+
+        # A temporary list for a sorted row
+        tmp = []
+
+        # Select data for sorting
+        if row >= self.offsetY:
+            # n : n-th column
+            # d : data in row
+            for n, d in enumerate(self.data[row - self.offsetY]):
+                tmp.append((n, d[0]))
+        else:
+            # Sort column names
+            for n, d in enumerate(self.columns[1:]):
+                # Change numbers in characters to float.
+                # This is to correctly sort numbers.
+                parsed = False
+                if not isinstance(d[row], float):
+                    try:
+                        number = float(d[row])
+                    except ValueError:
+                        pass
+                    else:
+                        parsed = True
+
+                if parsed:
+                    tmp.append((n, number))
+                else:
+                    tmp.append((n, d[row]))
+
+        # Sort ascending
+        tmp.sort(key=lambda x: x[1])
+        if mode:
+            # Sort descending
+            tmp.reverse()
+
+        # Temporarily store data
+        data2 = tuple(self.data)
+        # Temporarily store column data
+        columns2 = tuple(self.columns)
+
+        self.data = []
+        self.columns = []
+        # Add column names only
+        self.columns.append(columns2[0])
+
+        # Arrange all data using the sorted list
+        for j in data2:
+            row = []
+            for i in tmp:
+                row.append(j[i[0]])
+            self.data.append(tuple(row))
+
+        # Arrange column descriptuins using the sorted list
+        for i in tmp:
+            self.columns.append(columns2[i[0] + 1])
+
+        # Data change signal
+        top_left = self.createIndex(0, 0)
+        bottom_right = self.createIndex(self.row_count(), self.column_cout())
+        self.dataChanged(top_left, bottom_right)
 
 
 class ResultsWindow(QTableView):
@@ -64,7 +418,6 @@ class ResultsWindow(QTableView):
 
         selected_cell_type = self.model().data(index, Qt.UserRole + 1)
 
-        # TODO: Find out the purpose of the binary OR "|" operator
         if selected_cell_type == 'row':
             return flag | QItemSelectionModel.Rows
         elif selected_cell_type == 'column':
