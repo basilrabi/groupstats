@@ -23,12 +23,17 @@
 """
 
 from math import sqrt
-from qgis.PyQt.QtCore import (QAbstractTableModel,
+from qgis.PyQt.QtCore import (QAbstractListModel,
+                              QAbstractTableModel,
+                              QByteArray,
                               QCoreApplication,
+                              QDataStream,
+                              QIODevice,
                               QItemSelectionModel,
+                              QMimeData,
                               QObject,
                               Qt)
-from qgis.PyQt.QtGui import QBrush, QColor, QFont
+from qgis.PyQt.QtGui import QBrush, QColor, QFont, QIcon
 from qgis.PyQt.QtWidgets import QMainWindow, QTableView
 
 from .groupstats_ui import Ui_GroupStatsDialog
@@ -154,6 +159,121 @@ class GroupStatsDialog(QMainWindow):
         self.ui.setupUi(self)
 
 
+class ListModel(QAbstractListModel):
+    """
+    A window with attribute list.
+    Data stored in the list: [(attribute type, name, id), ...]
+    """
+
+    def __init__(self, main_window):
+        super().__init__()
+        self.data = []
+        self.main_window = main_window
+        self.calculation = Calculation()
+
+    def cell(self, index, role=Qt.DisplayRole):
+        """
+        Returns data from the table cell?
+        """
+        if not index.isValid() or not 0 <= index.row() < self.rowCount():
+            return None
+
+        row = index.row()
+
+        if role == Qt.DisplayRole:
+            return self.data[row][1]
+        elif role == Qt.DecorationRole:
+            if self.data[row][0] == 'geometry':
+                icon = QIcon(':/plugins/groupstats/icons/geom.png')
+            elif self.data[row][0] == 'calculation':
+                icon = QIcon(':/plugins/groupstats/icons/calc.png')
+            elif self.data[row][0] == 'alphabet':
+                icon = QIcon(':/plugins/groupstats/icons/alpha.png')
+            else:
+                icon = QIcon(':/plugins/groupstats/icons/digits.png')
+            return icon
+
+        return None
+
+    def flags(self, index):
+        """
+        Item flags.
+        """
+        flags = super().flags(index)
+        if index.isValid():
+            return flags | \
+                Qt.ItemIsDragEnabled | \
+                Qt.ItemIsEnabled | \
+                Qt.ItemIsSelectable
+        else:
+            return Qt.ItemIsDropEnabled
+
+    def insertRows(self, row, number, index, data):
+        """
+        Insert [data].
+        """
+        self.beginInsertRows(index, row, row + number - 1)
+        for n in range(number):
+            self.data.insert(row + n, data[n])
+        self.endInsertRows()
+        return True
+
+    def mimeData(self, indices, mimeType='application/x-groupstats-fieldL'):
+        """
+        Mime data.
+        """
+        mimeData = QMimeData()
+        data = QByteArray()
+        stream = QDataStream(data, QIODevice.WriteOnly)
+
+        for index in indices:
+            row = index.row()
+            stream.writeBytes(self.data[row][0])
+            stream.writeBytes(self.data[row][1])
+            stream.writeInt16(self.data[row][2])
+
+        mimeData.setData(mimeType)
+
+        return mimeData
+
+    def mimeTypes(self):
+        """
+        Mime types.
+        """
+        return [
+            'application/x-groupstats-fieldL',
+            'application/x-groupstats-fieldWK'
+            'application/x-groupstats-fieldW'
+        ]
+
+    def removeRows(self, row, number, index):
+        """
+        Remove rows from self.data.
+        """
+        self.beginRemoveRows(index, row, row + number - 1)
+        del self.data[row:(row + number)]
+        self.endRemoveRows()
+        return True
+
+    def rowCount(self):
+        """
+        Number of rows.
+        """
+        return len(self.data)
+
+    def supportedDragActions(self):
+        """
+        Drag actions.
+        """
+        return Qt.MoveAction
+
+    def supportedDropActions(self):
+        """
+        Drop actions
+        """
+        return Qt.MoveAction
+
+
 class ResultsModel(QAbstractTableModel):
     """
     Model for the window with the results of calculations.
@@ -178,7 +298,7 @@ class ResultsModel(QAbstractTableModel):
         """
         Returns data from the table cell?
         """
-        if not index.isValid() or not 0 <= index.row() < self.row_count():
+        if not index.isValid() or not 0 <= index.row() < self.rowCount():
             return None
 
         row = index.row() - self.offsetY
@@ -242,7 +362,7 @@ class ResultsModel(QAbstractTableModel):
 
         return None
 
-    def column_cout(self):
+    def columnCout(self):
         """
         Count the number of columns?
         """
@@ -257,7 +377,7 @@ class ResultsModel(QAbstractTableModel):
 
         return l
 
-    def row_count(self):
+    def rowCount(self):
         """
         Count the number of rows?
         """
@@ -323,7 +443,7 @@ class ResultsModel(QAbstractTableModel):
 
         # Data change signal
         top_left = self.createIndex(0, 0)
-        bottom_right = self.createIndex(self.row_count(), self.column_cout())
+        bottom_right = self.createIndex(self.rowCount(), self.columnCout())
         self.dataChanged(top_left, bottom_right)
 
     def sortRow(self, row, mode=0):
@@ -391,7 +511,7 @@ class ResultsModel(QAbstractTableModel):
 
         # Data change signal
         top_left = self.createIndex(0, 0)
-        bottom_right = self.createIndex(self.row_count(), self.column_cout())
+        bottom_right = self.createIndex(self.rowCount(), self.columnCount())
         self.dataChanged(top_left, bottom_right)
 
 
