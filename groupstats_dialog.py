@@ -205,8 +205,7 @@ class ListModel(QAbstractListModel):
                 Qt.ItemIsDragEnabled | \
                 Qt.ItemIsEnabled | \
                 Qt.ItemIsSelectable
-        else:
-            return Qt.ItemIsDropEnabled
+        return Qt.ItemIsDropEnabled
 
     def insertRows(self, row, number, index, data):
         """
@@ -218,7 +217,7 @@ class ListModel(QAbstractListModel):
         self.endInsertRows()
         return True
 
-    def mimeData(self, indices, mimeType='application/x-groupstats-fieldL'):
+    def mimeData(self, indices, mimeType='application/x-groupstats-fieldList'):
         """
         Mime data.
         """
@@ -241,9 +240,9 @@ class ListModel(QAbstractListModel):
         Mime types.
         """
         return [
-            'application/x-groupstats-fieldL',
-            'application/x-groupstats-fieldWK'
-            'application/x-groupstats-fieldW'
+            'application/x-groupstats-fieldList',
+            'application/x-groupstats-fieldCR',
+            'application/x-groupstats-fieldValue'
         ]
 
     def removeRows(self, row, number, index):
@@ -272,6 +271,108 @@ class ListModel(QAbstractListModel):
         Drop actions
         """
         return Qt.MoveAction
+
+
+class ColRowWindow(ListModel):
+    """
+    Model for windows with field lists for rows and columns.
+
+    ModelWiK
+    """
+    def dropMimeData(self, mimeData, row, index):
+        """
+        Drop MIME data.
+        """
+        if mimeData.hasFormat('application/x-groupstats-fieldList'):
+            data_type = 'application/x-groupstats-fieldList'
+        elif mimeData.hasFormat('application/x-groupstats-fieldCR'):
+            data_type = 'application/x-groupstats-fieldCR'
+        elif mimeData.hasFormat('application/x-groupstats-fieldValue'):
+            data_type = 'application/x-groupstats-fieldValue'
+        else:
+            return False
+
+        data = mimeData.data(data_type)
+        stream = QDataStream(data, QIODevice.ReadOnly)
+        data_set = []
+        while not stream.atEnd():
+            stream_type = stream.readBytes()
+            name = stream.readBytes()
+            id = stream.readInt16()
+            fields = (stream_type, name, id)
+            modelRCV = self.modelRC + self.modelValue
+
+            if stream_type == 'calculation' and \
+                stream_type in [x[0] for x in modelRCV] and \
+                    data_type == 'application/x-groupstats-fieldList':
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'Function can be droped in only one area'
+                    ), 15000)
+                return False
+            elif (fields in self.modelRC or fields in self.data) and \
+                data_type in ['application/x-groupstats-fieldList',
+                              'application/x-groupstats-fieldValue']:
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'This field has already been droped.'
+                    ), 15000)
+                return False
+            elif stream_type == 'calculation' and \
+                id not in self.calculation.listText and \
+                    'alphabet' in [x[0] for x in self.modelValue]:
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'For the text value function can only be one of '
+                        '{self.calculation.textName}.'
+                    ), 15000)
+                return False
+
+            data_set.append(fields)
+
+        self.insertRows(row, len(data_set), index, data_set)
+
+
+    def mimeData(self, index):
+        """
+        MIME data.
+        """
+        return super().mimeData(index, 'application/x-groupstats-fieldCR')
+
+    def setData(self, index, value):
+        """
+        Sets data.
+        """
+        self.data.insert(index, value)
+
+    def setOtherModels(self, modelRC, modelValue):
+        """
+        Set data for other models.
+        """
+        self.modelRC = modelRC.data
+        self.modelValue = modelValue.data
+
+
+
+class FieldWindow(ListModel):
+    """
+    Model for a window with a list of available fields.
+
+    ModelListaPol
+    """
+    pass
+
+
+class ValueWindow(ListModel):
+    """
+    A model for a window with values ​​to be calculated.
+
+    ModelWartosci
+    """
+    pass
 
 
 class ResultsModel(QAbstractTableModel):
