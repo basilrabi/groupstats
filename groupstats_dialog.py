@@ -279,6 +279,12 @@ class ColRowWindow(ListModel):
 
     ModelWiK
     """
+
+    def __init__(self):
+        super().__init__()
+        self.modelRC = None
+        self.modelValue = None
+
     def dropMimeData(self, mimeData, row, index):
         """
         Drop MIME data.
@@ -308,7 +314,7 @@ class ColRowWindow(ListModel):
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
-                        'Function can be droped in only one area'
+                        'Function can be droped in only one area.'
                     ), 15000)
                 return False
             elif (fields in self.modelRC or fields in self.data) and \
@@ -335,7 +341,6 @@ class ColRowWindow(ListModel):
 
         self.insertRows(row, len(data_set), index, data_set)
 
-
     def mimeData(self, index):
         """
         MIME data.
@@ -356,7 +361,6 @@ class ColRowWindow(ListModel):
         self.modelValue = modelValue.data
 
 
-
 class FieldWindow(ListModel):
     """
     Model for a window with a list of available fields.
@@ -372,7 +376,110 @@ class ValueWindow(ListModel):
 
     ModelWartosci
     """
-    pass
+
+    def __init__(self):
+        super().__init__()
+        self.modelRows = None
+        self.modelColumns = None
+
+    def dropMimeData(self, mimeData, row, index):
+        """
+        Drop MIME data.
+        """
+        if mimeData.hasFormat('application/x-groupstats-fieldList'):
+            data_type = 'application/x-groupstats-fieldList'
+        elif mimeData.hasFormat('application/x-groupstats-fieldCR'):
+            data_type = 'application/x-groupstats-fieldCR'
+        elif mimeData.hasFormat('application/x-groupstats-fieldValue'):
+            data_type = 'application/x-groupstats-fieldValue'
+        else:
+            return False
+
+        data = mimeData.data(data_type)
+        stream = QDataStream(data, QIODevice.ReadOnly)
+        data_set = []
+        while not stream.atEnd():
+            stream_type = stream.readBytes()
+            name = stream.readBytes()
+            id = stream.readInt16()
+            fields = (stream_type, name, id)
+            dataRC = self.modelRows + self.modelColumns
+            all_data = dataRC + self.data
+
+            if len(self.data) >= 2:
+
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'Value field may contain a maximum of two entries.'
+                    ), 1500)
+                return False
+
+            elif stream_type == 'calculation' and \
+                stream_type in [x[0] for x in all_data] and \
+                    data_type == 'application/x-groupstats-fieldList':
+
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'Function can be droped in only one area.'
+                    ), 15000)
+                return False
+
+            elif len(self.data) == 1 and stream_type != 'calculation' and \
+                    self.data[0][0] != 'calculation':
+
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'One of the items in the Value field must be a '
+                        'function.'
+                    ), 15000)
+                return False
+
+            elif len(self.data) == 1 and \
+                    ((stream_type == 'alphabet' and
+                      self.data[0][2] not in self.calculation.listText) or
+                     (id not in self.calculation.listText and
+                      self.data[0][0] == 'alphabet')):
+
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'For the text value function can only be one of '
+                        '{self.calculation.textName}.'
+                    ))
+                return False
+
+            elif stream_type == 'alphabet' and \
+                    [x for x in dataRC if x[0] == 'calculation' and
+                     x[2] not in self.cakculation.listText]:
+
+                self.main_window.statusBar() \
+                    .showMessage(QCoreApplication.translate(
+                        'groupstats',
+                        'For the text value function can only be one of '
+                        '{self.calculation.textName}.'
+                    ))
+                return False
+
+            data_set.append(fields)
+
+        self.insertRows(row, len(data_set), index, data_set)
+        return True
+
+    def mimeData(self, indices):
+        """
+        MIME data
+        """
+        return super().mimeData(indices, 'application/x-groupstats-fieldValue')
+
+    def setOtherModels(self, modelRows, modelColumns):
+        """
+        Set data for other models.
+        """
+        self.modelRows = modelRows.data
+        self.modelColumns = modelColumns.data
 
 
 class ResultsModel(QAbstractTableModel):
