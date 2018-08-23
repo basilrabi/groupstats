@@ -25,7 +25,8 @@ import os.path
 
 from PyQt5.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QAction
+from PyQt5.QtWidgets import QAction, QMessageBox
+from qgis.core import QgsProject
 
 # Initialize Qt resources from file resources.py
 from . import resources  # pylint: disable=W0611
@@ -181,12 +182,25 @@ class GroupStats:
 
     def run(self):
         """Run method that performs all the real work"""
-        # show the dialog
+
+        # Load layers form project
+        layers = QgsProject.instance().mapLayers()
+        layerList = []
+        # pylint: disable=W0622
+        for id in list(layers.keys()):
+            if layers[id].type() == 0:
+                layerList.append((layers[id].name(), id))
+
+        if (not layerList) or (not layers):
+            QMessageBox.information(
+                None,
+                QCoreApplication.translate('groupstats', 'Information'),
+                QCoreApplication.translate(
+                    'groupstats', 'Vector layers not found.'
+                )
+            )
+            return
+
+        self.dlg.iface = self.iface
+        self.dlg.setLayers(layerList)
         self.dlg.show()
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass

@@ -23,18 +23,21 @@
 """
 
 from math import sqrt
+from typing import List, Optional, Tuple, Union
 from qgis.PyQt.QtCore import (QAbstractListModel,
                               QAbstractTableModel,
                               QByteArray,
                               QCoreApplication,
                               QDataStream,
+                              QEvent,
                               QIODevice,
                               QItemSelectionModel,
                               QMimeData,
+                              QModelIndex,
                               QObject,
                               Qt)
 from qgis.PyQt.QtGui import QBrush, QColor, QFont, QIcon
-from qgis.PyQt.QtWidgets import QMainWindow, QTableView
+from qgis.PyQt.QtWidgets import QMainWindow, QTableView, QWidget
 
 from .groupstats_ui import Ui_GroupStatsDialog
 
@@ -44,9 +47,8 @@ class Calculation(QObject):
     A class containing functions that perform statistical computations.
     """
 
-    def __init__(self):
-        super().__init__()
-
+    def __init__(self, parent: QObject) -> None:
+        super().__init__(parent)
         # List of ID, name and calculation function
         self.list = {
             0: (QCoreApplication.translate(
@@ -83,25 +85,25 @@ class Calculation(QObject):
             self.textName = self.textName + self.list[i][0] + ', '
         self.textName = self.textName[:-2]
 
-    def count(self, result):
+    def count(self, result) -> int:
         """
         Number of matching rows.
         """
         return len(result)
 
-    def maximum(self, result):
+    def maximum(self, result) -> Union[float, int]:
         """
         Maximum value in the result.
         """
         return max(result)
 
-    def mean(self, result):
+    def mean(self, result) -> float:
         """
         Average of the given set of results.
         """
         return self.sum(result) / self.count(result)
 
-    def median(self, result):
+    def median(self, result) -> Union[float, int]:
         """
         Median of values.
         """
@@ -118,25 +120,25 @@ class Calculation(QObject):
 
         return median
 
-    def minimum(self, result):
+    def minimum(self, result) -> Union[float, int]:
         """
         Minimum value in the result.
         """
         return min(result)
 
-    def standard_deviation(self, result):
+    def standard_deviation(self, result) -> float:
         """
         Population's standard deviation.
         """
         return sqrt(self.variance(result))
 
-    def sum(self, result):
+    def sum(self, result) -> Union[float, int]:
         """
         Summation of results.
         """
         return sum(result)
 
-    def variance(self, result):
+    def variance(self, result) -> Union[float, int]:
         """
         Population's variance.
         """
@@ -151,12 +153,69 @@ class GroupStatsDialog(QMainWindow):
     Plugin dialog.
     """
 
-    def __init__(self):
-        """Constructor."""
+    def __init__(self) -> None:
         super().__init__()
-        # QWidget.__init__(self)
         self.ui = Ui_GroupStatsDialog()
         self.ui.setupUi(self)
+        self.ui.results = ResultsWindow(self.ui.centralwidget)
+        self.ui.horizontalLayout.addWidget(self.ui.results)
+        self.calculation = Calculation(self)
+        self.ui.fieldList.setAcceptDrops(True)
+        self.ui.fieldList.setModelColumn(2)
+        self.ui.rows.setAcceptDrops(True)
+        self.ui.columns.setAcceptDrops(True)
+        self.ui.values.setAcceptDrops(True)
+
+        self.window1 = FieldWindow(self)
+        # self.window2
+        # self.window3
+        # self.window4
+
+    def refreshFields(self, index: int) -> None:
+        """
+        Run after selecting a layer from the list. Sets a new list of fields to
+        choose from and deletes windows with already selected fields.
+
+        wyborWarstwy
+        """
+        pass
+
+    def showResult(self):
+        """
+        Perform calculations and send them to display.
+
+        pokazWynik
+        """
+        # selected_rows
+        # selected_columns
+        # selected_value_comp
+        pass
+
+    def setLayers(self, layers: List[Tuple[str, str]]) -> None:
+        """
+        Adds the available qgis layers to the window.
+
+        ustawWarstwy
+        """
+        index = self.ui.layer.currentIndex()
+
+        if index != -1:
+            # id of previously selected layer
+            layer_id = self.ui.layer.itemData(index)
+
+        # fill comboBox with a new list of layers
+        self.ui.layer.blockSignals(True)
+        self.ui.layer.clear()
+        layers.sort(key=lambda x: x[0].lower())
+        for i in layers:
+            self.ui.layer.addItem(i[0], i[1])
+
+        if index != -1:
+            index2 = self.ui.layer.findData(layer_id)
+            if index2 != -1:
+                self.ui.layer.setCurrentIndex(index2)
+            else:
+                self.refreshFields(0)
 
 
 class ListModel(QAbstractListModel):
@@ -165,11 +224,11 @@ class ListModel(QAbstractListModel):
     Data stored in the list: [(attribute type, name, id), ...]
     """
 
-    def __init__(self, main_window):
-        super().__init__()
+    def __init__(self, main_window, parent: Optional[QObject] = None) -> None:
+        super().__init__(parent)
         self.data = []
         self.main_window = main_window
-        self.calculation = Calculation()
+        self.calculation = Calculation(self)
 
     def cell(self, index, role=Qt.DisplayRole):
         """
@@ -304,7 +363,7 @@ class ColRowWindow(ListModel):
         while not stream.atEnd():
             stream_type = stream.readBytes()
             name = stream.readBytes()
-            id = stream.readInt16()
+            id = stream.readInt16()  # pylint: disable=W0622
             fields = (stream_type, name, id)
             modelRCV = self.modelRC + self.modelValue
 
@@ -401,7 +460,7 @@ class ValueWindow(ListModel):
         while not stream.atEnd():
             stream_type = stream.readBytes()
             name = stream.readBytes()
-            id = stream.readInt16()
+            id = stream.readInt16()  # pylint: disable=W0622
             fields = (stream_type, name, id)
             dataRC = self.modelRows + self.modelColumns
             all_data = dataRC + self.data
@@ -728,14 +787,18 @@ class ResultsWindow(QTableView):
     Window with calculation results.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent=parent)
         self.setSortingEnabled(True)
         self.setObjectName('results')
         self.verticalHeader().setSortIndicatorShown(True)
         self.clicked.connect(self.checkAll)
 
-    def selectionCommand(self, index, event=None):
+    def selectionCommand(
+            self,
+            index: QModelIndex,
+            event: Optional[QEvent] = None
+    ) -> QItemSelectionModel.SelectionFlag:
         """
         Adds selection of entire rows and columns when the table header is
         selected
@@ -750,10 +813,9 @@ class ResultsWindow(QTableView):
             return flag | QItemSelectionModel.Rows
         elif selected_cell_type == 'column':
             return flag | QItemSelectionModel.Columns
-        else:
-            return flag
+        return flag
 
-    def checkAll(self, index):
+    def checkAll(self, index: QModelIndex) -> None:
         """
         Select or deselect all data after clicking on the corner of the table.
         """
