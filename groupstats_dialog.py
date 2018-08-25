@@ -22,24 +22,16 @@
  ***************************************************************************/
 """
 
-from math import sqrt
-from typing import List, Optional, Tuple, Union
-from qgis.core import QgsVectorLayer
-from qgis.PyQt.QtCore import (QAbstractListModel,
-                              QAbstractTableModel,
-                              QByteArray,
-                              QCoreApplication,
-                              QDataStream,
-                              QEvent,
-                              QIODevice,
-                              QItemSelectionModel,
-                              QMimeData,
-                              QModelIndex,
-                              QObject,
-                              Qt)
-from qgis.PyQt.QtGui import QBrush, QColor, QFont, QIcon
-from qgis.PyQt.QtWidgets import QMainWindow, QTableView, QWidget
+from typing import List, Tuple
+from qgis.core import QgsProject
+from qgis.PyQt.QtCore import QCoreApplication, QModelIndex
+from qgis.PyQt.QtWidgets import QMainWindow
 
+from .groupstats_classes import (Calculation,
+                                 ColRowWindow,
+                                 FieldWindow,
+                                 ResultsWindow,
+                                 ValueWindow)
 from .groupstats_ui import Ui_GroupStatsDialog
 
 mime_types = {
@@ -47,138 +39,6 @@ mime_types = {
     'colrow': 'application/x-groupstats-fieldColumnRow',
     'value': 'application/x-groupstats-fieldValue'
 }
-
-
-class Calculation(QObject):
-    """
-    A class containing functions that perform statistical computations.
-
-    Obliczenia
-    """
-
-    def __init__(self, parent: QObject) -> None:
-        super().__init__(parent)
-        # List of ID, name and calculation function
-        self.list = {
-            0: (QCoreApplication.translate(
-                'Calculation', 'count'
-            ), self.count),
-            1: (QCoreApplication.translate(
-                'Calculation', 'sum'
-            ), self.sum),
-            2: (QCoreApplication.translate(
-                'Calculation', 'mean'
-            ), self.mean),
-            3: (QCoreApplication.translate(
-                'Calculation', 'variance'
-            ), self.variance),
-            4: (QCoreApplication.translate(
-                'Calculation', 'standard_deviation'
-            ), self.standard_deviation),
-            5: (QCoreApplication.translate(
-                'Calculation', 'median'
-            ), self.median),
-            6: (QCoreApplication.translate(
-                'Calculation', 'minimum'
-            ), self.minimum),
-            7: (QCoreApplication.translate(
-                'Calculation', 'maximum'
-            ), self.maximum),
-            8: (QCoreApplication.translate(
-                'Calculation', 'unique'
-            ),),
-        }
-        self.listText = (0, 8)
-        self.textName = ''
-        for i in self.listText:
-            self.textName = self.textName + self.list[i][0] + ', '
-        self.textName = self.textName[:-2]
-
-    def count(self, result: list) -> int:
-        """
-        Number of matching rows.
-
-        liczebnosc
-        """
-        return len(result)
-
-    def maximum(self, result: list) -> Union[float, int]:
-        """
-        Maximum value in the result.
-
-        maksimum
-        """
-        return max(result)
-
-    def mean(self, result: list) -> float:
-        """
-        Average of the given set of results.
-
-        srednia
-        """
-        return self.sum(result) / self.count(result)
-
-    def median(self, result: list) -> Union[float, int]:
-        """
-        Median of values.
-
-        mediana
-        """
-        result.sort()
-        count = self.count(result)
-        if count == 1:
-            median = result[0]
-        else:
-            position = count / 2
-            if count % 2 == 0:
-                median = (result[position] + result[position - 1]) / 2
-            else:
-                median = result[count]
-
-        return median
-
-    def minimum(self, result: list) -> Union[float, int]:
-        """
-        Minimum value in the result.
-
-        minimum
-        """
-        return min(result)
-
-    def standard_deviation(self, result: list) -> float:
-        """
-        Population's standard deviation.
-
-        odchylenie
-        """
-        return sqrt(self.variance(result))
-
-    def sum(self, result: list) -> Union[float, int]:
-        """
-        Summation of results.
-
-        suma
-        """
-        return sum(result)
-
-    def unique(self, result: list) -> int:
-        """
-        Number of unqie values.
-
-        unikalne
-        """
-        return len(set(result))
-
-    def variance(self, result: list) -> Union[float, int]:
-        """
-        Population's variance.
-
-        wariancja
-        """
-        variance = 0
-        for x in result:
-            variance = variance + (x - self.mean(result))**2
-        return variance / self.count(result)
 
 
 class GroupStatsDialog(QMainWindow):
@@ -199,10 +59,37 @@ class GroupStatsDialog(QMainWindow):
         self.ui.columns.setAcceptDrops(True)
         self.ui.values.setAcceptDrops(True)
 
-        self.window1 = FieldWindow(self)
-        # self.window2
-        # self.window3
-        # self.window4
+        self.windowField = FieldWindow(self)   # tm1
+        self.windowRow = ColRowWindow(self)    # tm2
+        self.windowColumn = ColRowWindow(self) # tm3
+        self.windowValue = ValueWindow(self)   # tm4
+        self.ui.fieldList.setModel(self.windowField)
+        self.ui.rows.setModel(self.windowRow)
+        self.ui.columns.setModel(self.windowColumn)
+        self.ui.values.setModel(self.windowValue)
+        self.windowRow.setOtherModels(self.windowColumn, self.windowValue)
+        self.windowColumn.setOtherModels(self.windowRow, self.windowValue)
+        self.windowValue.setOtherModels(self.windowRow, self.windowColumn)
+
+    def blockCalculations(self) -> None:
+        """
+        blokujObliczenia
+        """
+        columns = self.windowColumn.data
+        rows = self.windowRow.data
+        values = self.windowValue.data
+
+        # If there are numbers (attributes or geometry) in the value field and
+        # some calculating function has been selected
+        pass
+
+    def clearSelection(self) -> None:
+        """
+        Clears windows with selected rows, columns and values.
+
+        wyczyscWybor
+        """
+        pass
 
     def refreshFields(self, index: int) -> None:
         """
@@ -211,7 +98,72 @@ class GroupStatsDialog(QMainWindow):
 
         wyborWarstwy
         """
-        pass
+        # Get ID of the selected layer
+        layer_id = self.ui.layer.itemData(index)
+        layer = QgsProject.instance().mapLayer(layer_id)
+        provider = layer.dataProvider()
+        attributes = provider.fields()
+
+        if not isinstance(attributes, dict):
+            temp_attributes = {}
+            for i in range(attributes.count()):
+                temp_attributes[i] = attributes.at(i)
+            attributes = temp_attributes
+
+        fields = {}
+
+        if not layer.geometryType():
+            # point
+            fields['geometry'] = []
+        elif layer.geometryType() == 1:
+            # line
+            fields['geometry'] = [
+                (QCoreApplication.translate('groupstats', 'Length'), 1),
+            ]
+        elif layer.geometryType() == 2:
+            fields['geometry'] = [
+                (QCoreApplication.translate('groupstats', 'Perimeter'), 1),
+                (QCoreApplication.translate('groupstats', 'Area'), 2),
+            ]
+
+        # Separate number fields and text fields of the layer
+        fields['number'] = []
+        fields['text'] = []
+        # pylint: disable=W0622
+        for id, attribute in attributes.items():
+            if attribute.isNumeric():
+                fields['number'].append((attribute.name(), id))
+            else:
+                fields['text'].append((attribute.name(), id))
+
+        fields['calculation'] = []
+        calculations = self.calculation.list
+        for id, text in calculations.items():
+            fields['calculation'].append((text[0], id))
+
+        del self.windowField
+        # Insert field lists
+
+        self.windowField = FieldWindow()
+        self.ui.fieldList.setModel(self.windowField)
+        keys = ['calculation', 'geometry']
+        for i in keys:
+            j = fields[i]
+            j.sort(key=lambda x: x[0].lower())
+            rows = []
+            for k, l in j:
+                rows.append((i, k, l))
+            self.windowField.insertRows(0, len(rows), QModelIndex(), rows)
+
+        keys = ['number', 'text']
+        rows = []
+        for i in keys:
+            j = fields[i]
+            for k, l in j:
+                rows.append((i, k, l))
+        rows.sort(key=lambda x: x[1].lower())
+        self.windowField.insertRows(0, len(rows), QModelIndex(), rows)
+        self.clearSelection()
 
     def showResult(self):
         """
@@ -249,674 +201,3 @@ class GroupStatsDialog(QMainWindow):
                 self.ui.layer.setCurrentIndex(index2)
             else:
                 self.refreshFields(0)
-
-
-class ListModel(QAbstractListModel):
-    """
-    A window with attribute list.
-    Data stored in the list: [(attribute type, name, id), ...]
-
-    ModelList
-    """
-
-    def __init__(
-            self, main_window: QObject,
-            parent: Optional[QObject] = None) -> None:
-        super().__init__(parent)
-        self.data = []
-        self.main_window = main_window
-        self.calculation = Calculation(self)
-
-    def cell(self, index: QModelIndex, role=Qt.DisplayRole) -> QIcon:
-        """
-        Returns data from the table cell?
-
-        data
-        """
-        if not index.isValid() or not 0 <= index.row() < self.rowCount():
-            return None
-
-        row = index.row()
-
-        if role == Qt.DisplayRole:
-            return self.data[row][1]
-        elif role == Qt.DecorationRole:
-            if self.data[row][0] == 'geometry':
-                icon = QIcon(':/plugins/groupstats/icons/geom.png')
-            elif self.data[row][0] == 'calculation':
-                icon = QIcon(':/plugins/groupstats/icons/calc.png')
-            elif self.data[row][0] == 'alphabet':
-                icon = QIcon(':/plugins/groupstats/icons/alpha.png')
-            else:
-                icon = QIcon(':/plugins/groupstats/icons/digits.png')
-            return icon
-
-        return None
-
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        """
-        Item flags.
-
-        flags
-        """
-        flags = super().flags(index)
-        if index.isValid():
-            return flags | \
-                Qt.ItemIsDragEnabled | \
-                Qt.ItemIsEnabled | \
-                Qt.ItemIsSelectable
-        return Qt.ItemIsDropEnabled
-
-    def insertRows(
-            self, row: int, number: int, index: QModelIndex,
-            data: List[bytes, bytes, int]) -> bool:
-        """
-        Insert data.
-
-        insertRows
-        """
-        self.beginInsertRows(index, row, row + number - 1)
-        for n in range(number):
-            self.data.insert(row + n, data[n])
-        self.endInsertRows()
-        return True
-
-    def mimeData(
-            self, indices: Union[QModelIndex, List[QModelIndex]],
-            mimeType: str = mime_types['list']) -> QMimeData:
-        """
-        MIME data.
-
-        mimeData
-        """
-        mimeData = QMimeData()
-        data = QByteArray()
-        stream = QDataStream(data, QIODevice.WriteOnly)
-
-        for index in indices:
-            row = index.row()
-            stream.writeBytes(self.data[row][0])
-            stream.writeBytes(self.data[row][1])
-            stream.writeInt16(self.data[row][2])
-
-        mimeData.setData(mimeType)
-
-        return mimeData
-
-    def removeRows(self, row: int, number: int, index: QModelIndex) -> bool:
-        """
-        Remove rows from self.data.
-
-        removeRows
-        """
-        self.beginRemoveRows(index, row, row + number - 1)
-        del self.data[row:(row + number)]
-        self.endRemoveRows()
-        return True
-
-    def rowCount(self) -> int:
-        """
-        Number of rows.
-
-        rowCount
-        """
-        return len(self.data)
-
-    def supportedDragActions(self) -> Qt.DropAction:
-        """
-        Drag actions.
-
-        supportedDragActions
-        """
-        return Qt.MoveAction
-
-    def supportedDropActions(self) -> Qt.DropAction:
-        """
-        Drop actions
-
-        supportedDropActions
-        """
-        return Qt.MoveAction
-
-
-class ColRowWindow(ListModel):
-    """
-    Model for windows with field lists for rows and columns.
-
-    ModelWiK
-    """
-
-    def __init__(self, parent: QObject) -> None:
-        super().__init__(parent)
-        self.modelRC = None
-        self.modelValue = None
-
-    def dropMimeData(
-            self, mimeData: QMimeData, row: int, index: QModelIndex) -> bool:
-        """
-        Drop MIME data.
-
-        dropMimeData
-        """
-        if mimeData.hasFormat(mime_types['list']):
-            mime_type = mime_types['list']
-        elif mimeData.hasFormat(mime_types['colrow']):
-            mime_type = mime_types['colrow']
-        elif mimeData.hasFormat(mime_types['value']):
-            mime_type = mime_types['value']
-        else:
-            return False
-
-        data = mimeData.data(mime_type)
-        stream = QDataStream(data, QIODevice.ReadOnly)
-        data_set = []
-
-        while not stream.atEnd():
-            stream_type = stream.readBytes()
-            name = stream.readBytes()
-            id = stream.readInt16()  # pylint: disable=W0622
-            # TODO: stream_type and name might be needed to be decoded first
-            field = (stream_type, name, id)
-            modelRCV = self.modelRC + self.modelValue
-
-            if stream_type == 'calculation' and \
-                stream_type in [x[0] for x in modelRCV] and \
-                    mime_type == mime_types['list']:
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'Function can be droped in only one area.'
-                    ), 15000)
-                return False
-
-            elif (field in self.modelRC or field in self.data) and \
-                    mime_type in [mime_types['list'], mime_types['value']]:
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'This field has already been droped.'
-                    ), 15000)
-                return False
-
-            elif stream_type == 'calculation' and \
-                id not in self.calculation.listText and \
-                    'alphabet' in [x[0] for x in self.modelValue]:
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'For the text value, function can only be one of '
-                        '{self.calculation.textName}.'
-                    ), 15000)
-                return False
-
-            data_set.append(field)
-
-        self.insertRows(row, len(data_set), index, data_set)
-        return True
-
-    def mimeData(
-            self, indices: Union[QModelIndex, List[QModelIndex]]) -> QMimeData:
-        """
-        MIME data.
-
-        mimeData
-        """
-        # pylint: disable=W0221
-        return super().mimeData(indices, mime_types['colrow'])
-
-    def setData(self, index: int, value: list) -> None:
-        """
-        Sets data.
-
-        setData
-        """
-        self.data.insert(index, value)
-
-    def setOtherModels(
-            self,
-            modelRC: List[bytes, bytes, int],
-            modelValue: List[bytes, bytes, int]) -> None:
-        """
-        Set data for other models.
-
-        ustawInneModele
-        """
-        self.modelRC = modelRC.data
-        self.modelValue = modelValue.data
-
-
-class FieldWindow(ListModel):
-    """
-    Model for a window with a list of available fields.
-
-    ModelListaPol
-    """
-    pass
-
-
-class ValueWindow(ListModel):
-    """
-    A model for a window with values ​​to be calculated.
-
-    ModelWartosci
-    """
-
-    def __init__(self, parent: Optional[QObject] = None) -> None:
-        super().__init__(parent)
-        self.modelRows = None
-        self.modelColumns = None
-
-    def dropMimeData(
-            self, mimeData: QMimeData, row: int, index: QModelIndex) -> bool:
-        """
-        Drop MIME data.
-
-        dropMimeData
-        """
-        if mimeData.hasFormat(mime_types['list']):
-            mime_type = mime_types['list']
-        elif mimeData.hasFormat(mime_types['colrow']):
-            mime_type = mime_types['colrow']
-        elif mimeData.hasFormat(mime_types['value']):
-            mime_type = mime_types['value']
-        else:
-            return False
-
-        data = mimeData.data(mime_type)
-        stream = QDataStream(data, QIODevice.ReadOnly)
-        data_set = []
-        while not stream.atEnd():
-            stream_type = stream.readBytes()
-            name = stream.readBytes()
-            id = stream.readInt16()  # pylint: disable=W0622
-            field = (stream_type, name, id)
-            dataRC = self.modelRows + self.modelColumns
-            all_data = dataRC + self.data
-
-            if len(self.data) >= 2:
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'Value field may contain a maximum of two entries.'
-                    ), 1500)
-                return False
-
-            elif stream_type == 'calculation' and \
-                stream_type in [x[0] for x in all_data] and \
-                    mime_type == mime_types['list']:
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'Function can be droped in only one area.'
-                    ), 15000)
-                return False
-
-            elif len(self.data) == 1 and stream_type != 'calculation' and \
-                    self.data[0][0] != 'calculation':
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'One of the items in the Value field must be a '
-                        'function.'
-                    ), 15000)
-                return False
-
-            elif len(self.data) == 1 and \
-                    ((stream_type == 'alphabet' and
-                      self.data[0][2] not in self.calculation.listText) or
-                     (id not in self.calculation.listText and
-                      self.data[0][0] == 'alphabet')):
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'For the text value, function can only be one of '
-                        '{self.calculation.textName}.'
-                    ))
-                return False
-
-            elif stream_type == 'alphabet' and \
-                    [x for x in dataRC if x[0] == 'calculation' and
-                     x[2] not in self.calculation.listText]:
-                self.main_window.statusBar() \
-                    .showMessage(QCoreApplication.translate(
-                        'groupstats',
-                        'For the text value function can only be one of '
-                        '{self.calculation.textName}.'
-                    ))
-                return False
-
-            data_set.append(field)
-
-        self.insertRows(row, len(data_set), index, data_set)
-        return True
-
-    def mimeData(
-            self, indices: Union[QModelIndex, List[QModelIndex]]) -> QMimeData:
-        """
-        MIME data
-
-        mimeData
-        """
-        # pylint: disable=W0221
-        return super().mimeData(indices, mime_types['value'])
-
-    def setOtherModels(
-            self,
-            modelRows: List[bytes, bytes, int],
-            modelColumns: List[bytes, bytes, int]) -> None:
-        """
-        Set data for other models.
-
-        ustawInneModele
-        """
-        self.modelRows = modelRows.data
-        self.modelColumns = modelColumns.data
-
-
-class ResultsModel(QAbstractTableModel):
-    """
-    Model for the window with the results of calculations.
-
-    ModelWyniki
-    """
-
-    # TODO: type hints for list: data, rows, columns
-    def __init__(
-            self, data: List, rows: List, columns: List, layer: QgsVectorLayer,
-            parent: Optional[QObject] = None) -> None:
-        super().__init__(parent)
-        self.data = data
-        self.rows = rows
-        self.columns = columns
-        self.layer = layer
-
-        # Shift coordinates so the data starts at (0, 0)
-        self.offsetX = max(1, len(rows[0]))
-        self.offsetY = max(1, len(columns[0]))
-
-        # Offset column to make room for row names
-        if rows[0] and columns[0]:
-            self.offsetY += 1
-
-    # TODO: type hints for the following cases: Qt.DisplayRole and Qt.UserRole
-    def cell(self, index: QModelIndex,
-             role: Qt.ItemDataRole = Qt.DisplayRole) -> Union[
-                 None, QBrush, QFont, Qt.AlignmentFlag, str]:
-        """
-        Returns data from the table cell?
-
-        data
-        """
-        if not index.isValid() or not 0 <= index.row() < self.rowCount():
-            return None
-
-        row = index.row() - self.offsetY
-        column = index.column() - self.offsetX
-
-        if role == Qt.DisplayRole:
-            # Table cell data
-            if row >= 0 and column >= 0:
-                return self.data[row][column][0]
-            # Row descriptions?
-            elif column < 0 and row >= 0 and self.rows[0]:
-                return self.rows[row + 1][column]
-            # Row title field?
-            elif row == -1 and column < 0 and self.rows[0]:
-                return self.rows[0][column]
-            # Column description and names?
-            elif column >= -1 and row < 0 and self.columns[0]:
-                if self.rows[0]:
-                    # Break line?
-                    if row == -1:
-                        return ''
-                    # Descriptions and column names if there is a break line?
-                    else:
-                        return self.columns[column + 1][row + 1]
-                # Column descriptions and names if there is no break line?
-                return self.columns[column + 1][row]
-
-        elif role == Qt.UserRole:
-            if row >= 0 and column >= 0:
-                return self.data[row][column][1]
-
-        elif role == Qt.UserRole + 1:
-            if row < 0 and column >= 0:
-                return 'column'
-            elif row >= 0 and column < 0:
-                return 'row'
-            elif row >= 0 and column >= 0:
-                return 'data'
-
-        # Cell filling
-        elif role == Qt.BackgroundRole:
-            if row < 0 or column < 0:
-                # Gray for cells with descriptions and names
-                color = QColor(245, 235, 235)
-                brush = QBrush(color)
-                return brush
-
-        elif role == Qt.TextAlignmentRole:
-            if column < 0 and row < -1 and self.rows:
-                return Qt.AlignRight | Qt.AlignVCenter
-            elif column >= 0 and row < 0:
-                return Qt.AlignHCenter | Qt.AlignVCenter
-            elif column >= 0 and row >= 0:
-                return Qt.AlignRight | Qt.AlignVCenter
-
-        elif role == Qt.FontRole:
-            if row < 0 and column < 0:
-                font = QFont()
-                font.setBold(True)
-                return font
-
-        return None
-
-    def columnCount(self) -> int:
-        """
-        Count the number of columns?
-
-        columnCount
-        """
-        if self.rows[0] and self.columns[0]:
-            l = len(self.rows[0]) + len(self.columns[0])
-        elif self.rows[0] and not self.columns[0]:
-            l = len(self.rows[0]) + 1
-        elif not self.rows[0] and self.columns[0]:
-            l = len(self.columns[0])
-        else:
-            l = 2
-
-        return l
-
-    def rowCount(self) -> int:
-        """
-        Count the number of rows?
-
-        rowCount
-        """
-        return max(2, len(self.rows) + len(self.columns[0]))
-
-    def sortColumn(self, column: int, descending: bool = False) -> None:
-        """
-        Sorts the table according to the selected column.
-
-        sort
-        """
-        if len(self.rows) == 1:
-            return
-
-        # A temporary list for a sorted column
-        tmp = []
-
-        # If 1 column?
-        # Select data for sorting
-        if column >= self.offsetX:
-            # n : n-th row
-            # d : data in row
-            for n, d in enumerate(self.data):
-                tmp.append((n, d[column - self.offsetX][0]))
-        else:
-            # Sort row names
-            for n, d in enumerate(self.rows[1:]):
-                # Change numbers in characters to float.
-                # This is to correctly sort numbers.
-                parsed = False
-                if not isinstance(d[column], float):
-                    try:
-                        number = float(d[column])
-                    except ValueError:
-                        pass
-                    else:
-                        parsed = True
-
-                if parsed:
-                    tmp.append((n, number))
-                else:
-                    tmp.append((n, d[column]))
-
-        # Sort ascending
-        tmp.sort(key=lambda x: x[1])
-        if descending:
-            # Sort descending
-            tmp.reverse()
-
-        # Temporarily store data
-        data2 = tuple(self.data)
-        # Temporarily store row data
-        rows2 = tuple(self.rows)
-
-        self.data = []
-        self.rows = []
-        # Add row names only
-        self.rows.append(rows2[0])
-
-        # Arrange all data and row descriptions using the sorted list
-        for i in tmp:
-            self.data.append(data2[i[0]])
-            self.rows.append(rows2[i[0] + 1])
-
-        # Data change signal
-        top_left = self.createIndex(0, 0)
-        bottom_right = self.createIndex(self.rowCount(), self.columnCout())
-        self.dataChanged(top_left, bottom_right)
-
-    def sortRow(self, row: int, descending: bool = False) -> None:
-        """
-        Sorts the table according to the selected row.
-
-        sortRows
-        """
-        if len(self.columns) == 1:
-            return
-
-        # A temporary list for a sorted row
-        tmp = []
-
-        # Select data for sorting
-        if row >= self.offsetY:
-            # n : n-th column
-            # d : data in row
-            for n, d in enumerate(self.data[row - self.offsetY]):
-                tmp.append((n, d[0]))
-        else:
-            # Sort column names
-            for n, d in enumerate(self.columns[1:]):
-                # Change numbers in characters to float.
-                # This is to correctly sort numbers.
-                parsed = False
-                if not isinstance(d[row], float):
-                    try:
-                        number = float(d[row])
-                    except ValueError:
-                        pass
-                    else:
-                        parsed = True
-
-                if parsed:
-                    tmp.append((n, number))
-                else:
-                    tmp.append((n, d[row]))
-
-        # Sort ascending
-        tmp.sort(key=lambda x: x[1])
-        if descending:
-            # Sort descending
-            tmp.reverse()
-
-        # Temporarily store data
-        data2 = tuple(self.data)
-        # Temporarily store column data
-        columns2 = tuple(self.columns)
-
-        self.data = []
-        self.columns = []
-        # Add column names only
-        self.columns.append(columns2[0])
-
-        # Arrange all data using the sorted list
-        for j in data2:
-            row = []
-            for i in tmp:
-                row.append(j[i[0]])
-            self.data.append(tuple(row))
-
-        # Arrange column descriptuins using the sorted list
-        for i in tmp:
-            self.columns.append(columns2[i[0] + 1])
-
-        # Data change signal
-        top_left = self.createIndex(0, 0)
-        bottom_right = self.createIndex(self.rowCount(), self.columnCount())
-        self.dataChanged(top_left, bottom_right)
-
-
-class ResultsWindow(QTableView):
-    """
-    Window with calculation results.
-
-    OknoWyniki
-    """
-
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
-        super().__init__(parent=parent)
-        self.setSortingEnabled(True)
-        self.setObjectName('results')
-        self.verticalHeader().setSortIndicatorShown(True)
-        self.clicked.connect(self.checkAll)
-
-    def selectionCommand(
-            self, index: QModelIndex,
-            event: Optional[QEvent] = None
-    ) -> QItemSelectionModel.SelectionFlag:
-        """
-        Adds selection of entire rows and columns when the table header is
-        selected.
-
-        selectionCommand
-        """
-        # http://doc.qt.io/qt-5/qabstractitemview.html#selectionCommand
-        # http://doc.qt.io/qt-5/qitemselectionmodel.html#SelectionFlag-enum
-        flag = super().selectionCommand(index, event)
-        selected_cell_type = self.model().data(index, Qt.UserRole + 1)
-
-        if selected_cell_type == 'row':
-            return flag | QItemSelectionModel.Rows
-        elif selected_cell_type == 'column':
-            return flag | QItemSelectionModel.Columns
-        return flag
-
-    def checkAll(self, index: QModelIndex) -> None:
-        """
-        Select or deselect all data after clicking on the corner of the table.
-
-        zaznaczWszystko
-        """
-        selected_cell_type = self.model().data(index, Qt.UserRole + 1)
-
-        # Check if the corner is celected
-        if selected_cell_type not in ['data', 'row', 'column']:
-            # If the corner is selected, mark all data
-            if self.selectionModel().isSelected(index):
-                self.selectAll()
-            else:
-                self.clearSelection()
