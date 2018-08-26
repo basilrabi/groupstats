@@ -22,10 +22,15 @@
  ***************************************************************************/
 """
 
-from typing import List, Tuple
+import csv
+
+from typing import Any, List, Optional, Tuple, Union
 from qgis.core import QgsProject
-from qgis.PyQt.QtCore import QCoreApplication, QModelIndex
-from qgis.PyQt.QtWidgets import QMainWindow
+from qgis.PyQt.QtCore import QCoreApplication, QModelIndex, Qt
+from qgis.PyQt.QtWidgets import (QApplication,
+                                 QFileDialog,
+                                 QMainWindow,
+                                 QMessageBox)
 
 from .groupstats_classes import (Calculation,
                                  ColRowWindow,
@@ -61,7 +66,7 @@ class GroupStatsDialog(QMainWindow):
 
         self.windowField = FieldWindow(self)   # tm1
         self.windowRow = ColRowWindow(self)    # tm2
-        self.windowColumn = ColRowWindow(self) # tm3
+        self.windowColumn = ColRowWindow(self)  # tm3
         self.windowValue = ValueWindow(self)   # tm4
         self.ui.fieldList.setModel(self.windowField)
         self.ui.rows.setModel(self.windowRow)
@@ -80,8 +85,18 @@ class GroupStatsDialog(QMainWindow):
         values = self.windowValue.data
 
         # If there are numbers (attributes or geometry) in the value field and
-        # some calculating function has been selected
-        pass
+        # some calculating function has been selected, enabe calculate button.
+        if ('geometry' in [a[0] for a in values] or
+                'number' in [a[0] for a in values]) and \
+                'calculation' in [a[0] for a in columns + rows + values]:
+            self.ui.calculate.setEnabled(True)
+        # If there is a text attribute in the value field and exactly one
+        # function has been selected - counter
+        elif 'text' in [a[0] for a in values] and \
+                [a for a in columns + rows + values if a[0] == 'calculation']:
+            self.ui.calculate.setEnabled(True)
+        else:
+            self.ui.calculate.setEnabled(False)
 
     def clearSelection(self) -> None:
         """
@@ -90,6 +105,161 @@ class GroupStatsDialog(QMainWindow):
         wyczyscWybor
         """
         pass
+
+    def copy(self) -> None:
+        """
+        Copy all data to clipboard.
+
+        kopiowanie
+        """
+        text, success = self.download(formatText=True)
+        if success:
+            clip_board = QApplication.clipboard()
+            clip_board.setText(text)
+
+    def copySelected(self) -> None:
+        """
+        Copy selected data to clipboard.
+
+        kopiowanieZaznaczonych
+        """
+        text, success = self.download(allData=False, formatText=True)
+        if success:
+            clip_board = QApplication.clipboard()
+            clip_board.setText(text)
+
+    def download(self,
+                 allData: Optional[bool] = True,
+                 formatText: Optional[bool] = False) -> Tuple[
+                     Union[None, str, List[List[Any]]], bool]:
+        """
+        Download data from the results table.
+
+        pobierzDaneZTabeli
+        """
+        if not self.ui.results.model():
+            QMessageBox.information(
+                None,
+                QCoreApplication.translate('groupstats', 'Information'),
+                QCoreApplication.translate('groupstats',
+                                           'No data to save/copy.')
+            )
+            return None, False
+
+        text = ''
+        data = []
+        nCol = self.windowResult.columnCount()
+        nRow = self.windowResult.rowCount()
+        rows = []
+        columns = []
+
+        if not allData:
+            # If the 'only checked' option, download the indexes of the selected
+            # fields?
+            indices = self.ui.results.selectedIndexes()
+            if not indices:
+                QMessageBox.information(
+                    None,
+                    QCoreApplication.translate('groupstats', 'Information'),
+                    QCoreApplication.translate('groupstats',
+                                               'No data selected.')
+                )
+                return None, False
+            for i in indices:
+                columns.append(i.column())
+                rows.append(i.row())
+
+        # Copy the data from the table
+        for i in range(nRow):
+            if allData or i in rows or i < self.windowResult.offsetY:
+                row = []
+                for j in range(nCol):
+                    if allData or j in columns or \
+                            j < self.windowResult.offsetX:
+                        row.append(str(
+                            self.windowResult.createIndex(i, j).data()
+                        ))
+                data.append(row)
+
+        if formatText:
+            for m, i in enumerate(data):
+                if m:
+                    # If new row, add carriage return
+                    text = text + chr(13)
+                for n, j in enumerate(i):
+                    if n:
+                        # At every column, add horizontal tab
+                        text = text + chr(9)
+                    text = text + j
+            return text, True
+
+        return data, True
+
+    def exportCSV(self) -> None:
+        """
+        Save all data to a csv file.
+
+        eksportCSV
+        """
+        data, success = self.download()
+        if success:
+            self.saveDataToFile(data)
+
+    def exportCSVSelected(self) -> None:
+        """
+        Save selected data to a csv file.
+
+        eksportCSVZaznaczonych
+        """
+        data, success = self.download(allData=False)
+        if success:
+            self.saveDataToFile(data)
+
+    def saveDataToFile(self, data: List[List[Any]]) -> None:
+        """
+        Write data to a  file.
+
+        zapiszDaneWPliku
+        """
+        file_window = QFileDialog()
+        file_window.setAcceptMode(1)
+        file_window.setDefaultSuffix('csv')
+        file_window.setNameFilters(['CSV Files (*.csv)', 'All Files (*)'])
+        if file_window.exec_() == 0:
+            return
+        file_name = file_window.selectedFiles()[0]
+        csv_file = open(file_name, 'wt')
+        csv_writer = csv.writer(csv_file, delimiter=',')
+        for i in data:
+            csv_writer.writerow([x for x in i])
+        csv_file.close()
+
+    def showOnMap(self) -> None:
+        """
+        Show selected features on map canvas.
+
+        pokazNaMapie
+        """
+        # Get index of seletected fields
+        indices = self.ui.results.selectedIndexes()
+
+        ids = []
+        for i in indices:
+            # Get indices of objects to show
+            data = i.data(Qt.UserRole)
+            if not data:
+                # Reject rows with headings?
+                data = ()
+            for j in data:
+                ids.append(j)
+
+        if ids:
+            # Highlight and zoom to selected features
+            self.windowResult.layer.select(ids)
+            self.iface.mapCanvas().zoomToSelected(self.windowResult.layer)
+            if len(ids) == 1 and self.windowResult.layer.geometryType() == 0:
+                # If selected feature is only a point, set a 1:1000 scale zoom.
+                self.iface.mapCanvas().zoomScale(1000)
 
     def refreshFields(self, index: int) -> None:
         """
