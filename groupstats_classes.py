@@ -23,7 +23,7 @@
 """
 
 from math import sqrt
-from typing import List, Optional, Type, Union
+from typing import List, Optional, Tuple, Union
 from qgis.core import QgsVectorLayer
 from qgis.PyQt.QtCore import (QAbstractListModel,
                               QAbstractTableModel,
@@ -237,7 +237,7 @@ class ListModel(QAbstractListModel):
 
     def insertRows(
             self, row: int, number: int, index: QModelIndex,
-            data: List[str, str, int]) -> bool:
+            data: List[Tuple[str, str, int]]) -> bool:
         """
         Insert field list.
 
@@ -424,13 +424,10 @@ class ValueWindow(ListModel):
 
     def setOtherModels(
             self,
-            modelRows: Type[ListModel],
-            modelColumns: Type[ListModel]) -> None:
+            modelRows: 'ColRowWindow',
+            modelColumns: 'ColRowWindow') -> None:
         """
         Set data for other models.
-
-        modelRows : ColRowWindow
-        modelColumns : ColRowWindow
 
         ustawInneModele
         """
@@ -531,7 +528,8 @@ class ColRowWindow(ListModel):
         """
         self.data.insert(index, value)
 
-    def setOtherModels(self, modelA: ColRowWindow, modelB: ValueWindow) -> None:
+    def setOtherModels(self, modelA: 'ColRowWindow',
+                       modelB: ValueWindow) -> None:
         """
         Set data for other models.
 
@@ -598,8 +596,7 @@ class ResultsModel(QAbstractTableModel):
                     if row == -1:
                         return ''
                     # Descriptions and column names if there is a break line?
-                    else:
-                        return self.columns[column + 1][row + 1]
+                    return self.columns[column + 1][row + 1]
                 # Column descriptions and names if there is no break line?
                 return self.columns[column + 1][row]
 

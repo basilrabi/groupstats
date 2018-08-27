@@ -23,9 +23,11 @@
 """
 
 import csv
+import webbrowser
 
 from typing import Any, List, Optional, Tuple, Union
-from qgis.core import QgsProject
+from qgis.core import QgsProject, QgsVectorLayer
+# from qgis.gui import QgsSearchQueryBuilder
 from qgis.PyQt.QtCore import QCoreApplication, QModelIndex, Qt
 from qgis.PyQt.QtWidgets import (QApplication,
                                  QFileDialog,
@@ -64,10 +66,10 @@ class GroupStatsDialog(QMainWindow):
         self.ui.columns.setAcceptDrops(True)
         self.ui.values.setAcceptDrops(True)
 
-        self.windowField = FieldWindow(self)   # tm1
-        self.windowRow = ColRowWindow(self)    # tm2
+        self.windowField = FieldWindow(self)    # tm1
+        self.windowRow = ColRowWindow(self)     # tm2
         self.windowColumn = ColRowWindow(self)  # tm3
-        self.windowValue = ValueWindow(self)   # tm4
+        self.windowValue = ValueWindow(self)    # tm4
         self.ui.fieldList.setModel(self.windowField)
         self.ui.rows.setModel(self.windowRow)
         self.ui.columns.setModel(self.windowColumn)
@@ -76,35 +78,20 @@ class GroupStatsDialog(QMainWindow):
         self.windowColumn.setOtherModels(self.windowRow, self.windowValue)
         self.windowValue.setOtherModels(self.windowRow, self.windowColumn)
 
-    def blockCalculations(self) -> None:
-        """
-        blokujObliczenia
-        """
-        columns = self.windowColumn.data
-        rows = self.windowRow.data
-        values = self.windowValue.data
-
-        # If there are numbers (attributes or geometry) in the value field and
-        # some calculating function has been selected, enabe calculate button.
-        if ('geometry' in [a[0] for a in values] or
-                'number' in [a[0] for a in values]) and \
-                'calculation' in [a[0] for a in columns + rows + values]:
-            self.ui.calculate.setEnabled(True)
-        # If there is a text attribute in the value field and exactly one
-        # function has been selected - counter
-        elif 'text' in [a[0] for a in values] and \
-                [a for a in columns + rows + values if a[0] == 'calculation']:
-            self.ui.calculate.setEnabled(True)
-        else:
-            self.ui.calculate.setEnabled(False)
-
     def clearSelection(self) -> None:
         """
         Clears windows with selected rows, columns and values.
 
         wyczyscWybor
         """
-        pass
+        self.windowRow.removeRows(0, self.windowRow.rowCount(), QModelIndex())
+        self.windowColumn.removeRows(0,
+                                     self.windowColumn.rowCount(),
+                                     QModelIndex())
+        self.windowValue.removeRows(0,
+                                    self.windowValue.rowCount(),
+                                    QModelIndex())
+        self.ui.filter.setPlainText('')
 
     def copy(self) -> None:
         """
@@ -195,6 +182,28 @@ class GroupStatsDialog(QMainWindow):
 
         return data, True
 
+    def enableCalculations(self) -> None:
+        """
+        blokujObliczenia
+        """
+        columns = self.windowColumn.data
+        rows = self.windowRow.data
+        values = self.windowValue.data
+
+        # If there are numbers (attributes or geometry) in the value field and
+        # some calculating function has been selected, enable calculate button.
+        if ('geometry' in [a[0] for a in values] or
+                'number' in [a[0] for a in values]) and \
+                'calculation' in [a[0] for a in columns + rows + values]:
+            self.ui.calculate.setEnabled(True)
+        # If there is a text attribute in the value field and exactly one
+        # function has been selected - counter
+        elif 'text' in [a[0] for a in values] and \
+                [a for a in columns + rows + values if a[0] == 'calculation']:
+            self.ui.calculate.setEnabled(True)
+        else:
+            self.ui.calculate.setEnabled(False)
+
     def exportCSV(self) -> None:
         """
         Save all data to a csv file.
@@ -214,52 +223,6 @@ class GroupStatsDialog(QMainWindow):
         data, success = self.download(allData=False)
         if success:
             self.saveDataToFile(data)
-
-    def saveDataToFile(self, data: List[List[Any]]) -> None:
-        """
-        Write data to a  file.
-
-        zapiszDaneWPliku
-        """
-        file_window = QFileDialog()
-        file_window.setAcceptMode(1)
-        file_window.setDefaultSuffix('csv')
-        file_window.setNameFilters(['CSV Files (*.csv)', 'All Files (*)'])
-        if file_window.exec_() == 0:
-            return
-        file_name = file_window.selectedFiles()[0]
-        csv_file = open(file_name, 'wt')
-        csv_writer = csv.writer(csv_file, delimiter=',')
-        for i in data:
-            csv_writer.writerow([x for x in i])
-        csv_file.close()
-
-    def showOnMap(self) -> None:
-        """
-        Show selected features on map canvas.
-
-        pokazNaMapie
-        """
-        # Get index of seletected fields
-        indices = self.ui.results.selectedIndexes()
-
-        ids = []
-        for i in indices:
-            # Get indices of objects to show
-            data = i.data(Qt.UserRole)
-            if not data:
-                # Reject rows with headings?
-                data = ()
-            for j in data:
-                ids.append(j)
-
-        if ids:
-            # Highlight and zoom to selected features
-            self.windowResult.layer.select(ids)
-            self.iface.mapCanvas().zoomToSelected(self.windowResult.layer)
-            if len(ids) == 1 and self.windowResult.layer.geometryType() == 0:
-                # If selected feature is only a point, set a 1:1000 scale zoom.
-                self.iface.mapCanvas().zoomScale(1000)
 
     def refreshFields(self, index: int) -> None:
         """
@@ -335,16 +298,42 @@ class GroupStatsDialog(QMainWindow):
         self.windowField.insertRows(0, len(rows), QModelIndex(), rows)
         self.clearSelection()
 
-    def showResult(self):
+    def saveDataToFile(self, data: List[List[Any]]) -> None:
         """
-        Perform calculations and send them to display.
+        Write data to a  file.
 
-        pokazWynik
+        zapiszDaneWPliku
         """
-        # selected_rows
-        # selected_columns
-        # selected_value_comp
-        pass
+        file_window = QFileDialog()
+        file_window.setAcceptMode(1)
+        file_window.setDefaultSuffix('csv')
+        file_window.setNameFilters(['CSV Files (*.csv)', 'All Files (*)'])
+        if file_window.exec_() == 0:
+            return
+        file_name = file_window.selectedFiles()[0]
+        csv_file = open(file_name, 'wt')
+        csv_writer = csv.writer(csv_file, delimiter=',')
+        for i in data:
+            csv_writer.writerow([x for x in i])
+        csv_file.close()
+
+    # def setFilter(self) -> None:
+    #     """
+    #     Set feature filter.
+
+    #     ustawFiltr
+    #     """
+    #     # Get the selected layer
+    #     index = self.ui.layer.currentIndex()
+    #     layer_id = self.ui.layer.itemData(index)
+    #     layer = QgsProject.instance().mapLayer(layer_id)
+
+    #     # Get text from the window and display the query window
+    #     text = self.ui.filter.toPlainText()
+    #     query = QgsSearchQueryBuilder(layer)
+    #     query.setSearchString(text)
+    #     query.exec_()
+    #     self.ui.filter.setPlainText(query.searchString())
 
     def setLayers(self, layers: List[Tuple[str, str]]) -> None:
         """
@@ -371,3 +360,93 @@ class GroupStatsDialog(QMainWindow):
                 self.ui.layer.setCurrentIndex(index2)
             else:
                 self.refreshFields(0)
+
+    def showControlPanel(self) -> None:
+        """
+        Display control panel.
+
+        pokazPanelSterowania
+        """
+        self.ui.controlPanel.setVisible(True)
+
+    def showOnMap(self) -> None:
+        """
+        Show selected features on map canvas.
+
+        pokazNaMapie
+        """
+        # Get index of seletected fields
+        indices = self.ui.results.selectedIndexes()
+
+        ids = []
+        for i in indices:
+            # Get indices of objects to show
+            data = i.data(Qt.UserRole)
+            if not data:
+                # Reject rows with headings?
+                data = ()
+            for j in data:
+                ids.append(j)
+
+        if ids:
+            # Highlight and zoom to selected features
+            self.windowResult.layer.select(ids)
+            self.iface.mapCanvas().zoomToSelected(self.windowResult.layer)
+            if len(ids) == 1 and self.windowResult.layer.geometryType() == 0:
+                # If selected feature is only a point, set a 1:1000 scale zoom.
+                self.iface.mapCanvas().zoomScale(1000)
+
+    def showResult(self):
+        """
+        Perform calculations and send them to display.
+
+        pokazWynik
+        """
+        selected_rows = tuple(self.windowRow.data)
+        selected_columns = tuple(self.windowColumn.data)
+        selected_ValCalc = tuple(self.windowValue.data)
+
+        # Reading a field that has been selected for calculation.
+        # Only one is allowed.
+        value = [x for x in selected_ValCalc if x[0] != 'calculation'][0]
+
+        # Set the calculation function depending on the type of the selected
+        # value.
+        if value[0] == 'geometry':
+            if value[2] == 1:
+                fun = lambda feat: feat.geometry().length()
+            elif value[2] == 2:
+                fun = lambda feat: feat.geometry().area()
+        elif value[0] == 'text':
+            fun = lambda feat: None if not feat.attribute(value[1]) else \
+                feat.attribute(value[1])
+        elif value[0] == 'number':
+            fun = lambda feat: None if not feat.attribute(value[1]) else \
+                float(feat.attribute(value[1]))
+
+        # Get selected layer
+        index = self.ui.layer.currentIndex()
+        layer_id = self.ui.layer.itemData(index)
+        layer = QgsProject.instance().mapLayer(layer_id)
+
+        tmp_layer = QgsVectorLayer(layer.source(),
+                                   layer.name(),
+                                   layer.providerType())
+        tmp_layer.setCrs(layer.crs())
+        filter_str = self.ui.filter.toPlainText()
+        QMessageBox.information(
+            None,
+            QCoreApplication.translate('groupstats', 'Testing'),
+            QCoreApplication.translate(
+                'groupstats', filter_str
+            )
+        )
+
+    def showTutorial(self) -> None:
+        """
+        Open tutorial link.
+
+        pokazTutorial
+        """
+        url = 'http://underdark.wordpress.com/2013/02/02/group-stats-tutorial/'
+        webbrowser.open_new_tab(url)

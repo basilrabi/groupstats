@@ -26,7 +26,10 @@ SOURCES = __init__.py groupstats.py groupstats_dialog.py
 
 PLUGINNAME = groupstats
 
-PY_FILES = __init__.py $(PLUGINNAME).py $(PLUGINNAME)_dialog.py
+PY_FILES = __init__.py \
+           $(PLUGINNAME).py \
+           $(PLUGINNAME)_classes.py \
+           $(PLUGINNAME)_dialog.py
 
 UI_FILES = $(PLUGINNAME).ui
 
