@@ -103,7 +103,6 @@ class GroupStatsDialog(QMainWindow):
         self.ui.results.verticalHeader().sortIndicatorChanged \
             .connect(self.sortRow)
 
-
     def clearSelection(self) -> None:
         """
         Clears windows with selected rows, columns and values.
@@ -386,6 +385,10 @@ class GroupStatsDialog(QMainWindow):
                 self.ui.layer.setCurrentIndex(index2)
             else:
                 self.refreshFields(0)
+        else:
+            self.refreshFields(0)
+
+        self.ui.layer.blockSignals(False)
 
     def showControlPanel(self) -> None:
         """
