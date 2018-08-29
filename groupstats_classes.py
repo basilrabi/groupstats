@@ -263,8 +263,8 @@ class ListModel(QAbstractListModel):
 
         for index in indices:
             row = index.row()
-            stream.writeBytes(self.tab[row][0])
-            stream.writeBytes(self.tab[row][1])
+            stream.writeBytes(self.tab[row][0].encode('utf-8'))
+            stream.writeBytes(self.tab[row][1].encode('utf-8'))
             stream.writeInt16(self.tab[row][2])
 
         mimeData.setData(mimeType)
