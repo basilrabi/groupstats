@@ -97,7 +97,7 @@ class GroupStatsDialog(QMainWindow):
         self.ui.actionSaveCSV.triggered.connect(self.exportCSV)
         self.ui.actionSaveCSVSelected.triggered.connect(self.exportCSVSelected)
         self.ui.actionShowPanel.triggered.connect(self.showControlPanel)
-        self.ui.actionShowSelected.triggered.connect(self.showNormal)
+        self.ui.actionShowSelected.triggered.connect(self.showOnMap)
         self.ui.actionTutorial.triggered.connect(self.showTutorial)
 
         self.ui.results.verticalHeader().sortIndicatorChanged \
@@ -109,12 +109,12 @@ class GroupStatsDialog(QMainWindow):
 
         wyczyscWybor
         """
-        self.windowRow.removeRows(0, self.windowRow.rowCountB(), QModelIndex())
+        self.windowRow.removeRows(0, self.windowRow.rowCount(), QModelIndex())
         self.windowColumn.removeRows(0,
-                                     self.windowColumn.rowCountB(),
+                                     self.windowColumn.rowCount(),
                                      QModelIndex())
         self.windowValue.removeRows(0,
-                                    self.windowValue.rowCountB(),
+                                    self.windowValue.rowCount(),
                                     QModelIndex())
         self.ui.filter.setPlainText('')
 
@@ -161,7 +161,7 @@ class GroupStatsDialog(QMainWindow):
         text = ''
         data = []
         nCol = self.windowResult.columnCount()
-        nRow = self.windowResult.rowCountB()
+        nRow = self.windowResult.rowCount()
         rows = []
         columns = []
 
