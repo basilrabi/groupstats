@@ -85,8 +85,23 @@ class GroupStatsDialog(QMainWindow):
         self.windowColumn.setOtherModels(self.windowRow, self.windowValue)
         self.windowValue.setOtherModels(self.windowRow, self.windowColumn)
 
+        self.windowRow.rowsInserted.connect(self.enableCalculations)
+        self.windowRow.rowsRemoved.connect(self.enableCalculations)
+        self.windowColumn.rowsInserted.connect(self.enableCalculations)
+        self.windowColumn.rowsRemoved.connect(self.enableCalculations)
+        self.windowValue.rowsInserted.connect(self.enableCalculations)
+        self.windowValue.rowsRemoved.connect(self.enableCalculations)
+
+        self.ui.actionCopy.triggered.connect(self.copy)
+        self.ui.actionCopySelected.triggered.connect(self.copySelected)
+        self.ui.actionSaveCSV.triggered.connect(self.exportCSV)
+        self.ui.actionSaveCSVSelected.triggered.connect(self.exportCSVSelected)
+        self.ui.actionShowPanel.triggered.connect(self.showControlPanel)
+        self.ui.actionShowSelected.triggered.connect(self.showNormal)
         self.ui.actionTutorial.triggered.connect(self.showTutorial)
 
+        self.ui.results.verticalHeader().sortIndicatorChanged \
+            .connect(self.sortRow)
 
 
     def clearSelection(self) -> None:
