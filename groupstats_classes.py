@@ -267,7 +267,7 @@ class ListModel(QAbstractListModel):
             stream.writeBytes(self.tab[row][1].encode('utf-8'))
             stream.writeInt16(self.tab[row][2])
 
-        mimeData.setData(mimeType)
+        mimeData.setData(mimeType, data)
 
         return mimeData
 
