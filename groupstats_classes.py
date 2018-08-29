@@ -282,7 +282,13 @@ class ListModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
-    def rowCount(self) -> int:
+    def rowCount(self, parent: QModelIndex) -> int:
+        """
+        Dummy.
+        """
+        pass
+
+    def rowCountB(self) -> int:
         """
         Number of rows.
 
@@ -653,7 +659,13 @@ class ResultsModel(QAbstractTableModel):
 
         return l
 
-    def rowCount(self) -> int:
+    def rowCount(self, parent: QModelIndex) -> int:
+        """
+        Dummy
+        """
+        pass
+
+    def rowCountB(self) -> int:
         """
         Count the number of rows?
 

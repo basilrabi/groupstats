@@ -95,12 +95,12 @@ class GroupStatsDialog(QMainWindow):
 
         wyczyscWybor
         """
-        self.windowRow.removeRows(0, self.windowRow.rowCount(), QModelIndex())
+        self.windowRow.removeRows(0, self.windowRow.rowCountB(), QModelIndex())
         self.windowColumn.removeRows(0,
-                                     self.windowColumn.rowCount(),
+                                     self.windowColumn.rowCountB(),
                                      QModelIndex())
         self.windowValue.removeRows(0,
-                                    self.windowValue.rowCount(),
+                                    self.windowValue.rowCountB(),
                                     QModelIndex())
         self.ui.filter.setPlainText('')
 
@@ -147,7 +147,7 @@ class GroupStatsDialog(QMainWindow):
         text = ''
         data = []
         nCol = self.windowResult.columnCount()
-        nRow = self.windowResult.rowCount()
+        nRow = self.windowResult.rowCountB()
         rows = []
         columns = []
 
@@ -694,3 +694,9 @@ class GroupStatsDialog(QMainWindow):
         """
         url = 'http://underdark.wordpress.com/2013/02/02/group-stats-tutorial/'
         webbrowser.open_new_tab(url)
+
+    def sortRow(self, row: int, descending: bool) -> None:
+        """
+        ???
+        """
+        self.ui.results.model().sortRow(row, descending)
