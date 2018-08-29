@@ -37,6 +37,7 @@ from qgis.PyQt.QtWidgets import (QApplication,
 from .groupstats_classes import (Calculation,
                                  ColRowWindow,
                                  FieldWindow,
+                                 ResultsModel,
                                  ResultsWindow,
                                  ValueWindow)
 from .groupstats_ui import Ui_GroupStatsDialog
@@ -70,6 +71,7 @@ class GroupStatsDialog(QMainWindow):
         self.windowRow = ColRowWindow(self)     # tm2
         self.windowColumn = ColRowWindow(self)  # tm3
         self.windowValue = ValueWindow(self)    # tm4
+        self.windowResult = None                # tm5
         self.ui.fieldList.setModel(self.windowField)
         self.ui.rows.setModel(self.windowRow)
         self.ui.columns.setModel(self.windowColumn)
@@ -402,12 +404,14 @@ class GroupStatsDialog(QMainWindow):
 
         pokazWynik
         """
+        # Tuple[Tuple[str, str, int]]
         selected_rows = tuple(self.windowRow.data)
         selected_columns = tuple(self.windowColumn.data)
         selected_ValCalc = tuple(self.windowValue.data)
 
         # Reading a field that has been selected for calculation.
         # Only one is allowed.
+        # List[Tuple[str, str, int]]
         value = [x for x in selected_ValCalc if x[0] != 'calculation'][0]
 
         # Set the calculation function depending on the type of the selected
@@ -429,18 +433,249 @@ class GroupStatsDialog(QMainWindow):
         layer_id = self.ui.layer.itemData(index)
         layer = QgsProject.instance().mapLayer(layer_id)
 
+        selected_features_id = layer.selectedFeaturesIds()
+        only_selected = self.ui.onlySelected.isChecked()
+
         tmp_layer = QgsVectorLayer(layer.source(),
                                    layer.name(),
                                    layer.providerType())
         tmp_layer.setCrs(layer.crs())
         filter_str = self.ui.filter.toPlainText()
-        QMessageBox.information(
-            None,
-            QCoreApplication.translate('groupstats', 'Testing'),
-            QCoreApplication.translate(
-                'groupstats', filter_str
-            )
-        )
+        layer_filter = layer.subsetString()
+        if not layer_filter and filter_str:
+            tmp_layer.setSubsetString(filter_str)
+        elif layer_filter and filter_str:
+            tmp_layer.setSubsetString('{} and {}'.format(layer_filter,
+                                                         filter_str))
+
+        provider = tmp_layer.dataProvider()
+        features = provider.getFeatures()
+
+        # Dictionary on results {((row) (column)): [[values], [indexes]} ??
+        results = {}
+
+        # Compute percent_factor for progress monitoring
+        n_features = provider.featureCount()
+        if n_features:
+            percent_factor = 100 / n_features
+        else:
+            percent_factor = 100
+
+        progress = 0
+        count_null = 0
+
+        for f in features:
+            if not only_selected or f.id() in selected_features_id:
+                key_col = []
+                key_row = []
+                key = ()
+
+                for k in selected_columns:
+                    if k[0] == 'geometry':
+                        if k[2] == 1:
+                            key_col.append(f.geometr().length())
+                        elif k[2] == 2:
+                            key_col.append(f.geometry().area())
+                    elif k[0] in ['text', 'number']:
+                        if f.attribute(k[1]):
+                            new_key_kol = f.attribute(k[1])
+                        else:
+                            new_key_kol = ''
+                        key_col.append(new_key_kol)
+
+                for k in selected_rows:
+                    if k[0] == 'geometry':
+                        if k[2] == 1:
+                            key_row.append(f.geometry().length())
+                        elif k[2] == 2:
+                            key_row.append(f.geometry().area())
+                    elif k[0] in ['text', 'number']:
+                        if f.attribute(k[1]):
+                            new_key_row = f.attribute(k[1])
+                        else:
+                            new_key_row = ''
+                        key_row.append(new_key_row)
+
+                key = (tuple(key_row), tuple(key_col))
+
+                value_to_calculate = fun(f)
+                if value_to_calculate or self.ui.useNULL.isChecked():
+                    if not value_to_calculate:
+                        count_null += 1
+                        if value[0] == 'number':
+                            value_to_calculate = 0
+
+                    # If the key exists then a new value is added to the list.
+                    if key in results:
+                        results[key][0].append(value_to_calculate)
+                    # If the key does not exist then a new list is created.
+                    else:
+                        results[key] = [[value_to_calculate]]
+
+                    results[key][1].append(f.id())
+
+                else:
+                    count_null += 1
+
+                # Display progress
+                progress += percent_factor
+                self.statusBar().showMessage(
+                    QCoreApplication.translate(
+                        'groupstats', 'Calculating...'
+                    ) + '{:.2f}'.format(progress)
+                )
+        self.statusBar().showMessage(
+            self.statusBar().currentMessage() +
+            ' |  ' +
+            QCoreApplication.translate('GroupStats', 'generate view...'))
+
+        # Find unique row and column keys (separately)
+        keys = list(results.keys())
+        row_set = set([])
+        col_set = set([])
+        for key in keys:
+            # Add keys to the collection to reject repetition
+            row_set.add(key[0])
+            col_set.add(key[1])
+        rows = list(row_set)
+        cols = list(col_set)
+
+        # Create dictionary for rows and columns for faster searching.
+        row_dict = {}
+        col_dict = {}
+        for n, row in enumerate(rows):
+            row_dict[row] = n
+        for n, col in enumerate(cols):
+            col_dict[col] = n
+
+        calculations = [
+            [x[2] for x in selected_ValCalc if x[0] == 'calculation'],
+            [x[2] for x in selected_rows if x[0] == 'calculation'],
+            [x[2] for x in selected_columns if x[0] == 'calculation'], ]
+
+        # Take only a non-empty part of the list to calculate.
+        if calculations[0]:
+            calculation = calculations[0]
+        elif calculations[1]:
+            calculation = calculations[1]
+        else:
+            calculation = calculations[2]
+
+        # Create empty array for data (rows x columns)
+        data = []
+        for x in range(max(len(rows), len(rows) * len(calculations[1]))):
+            data.append(
+                max(len(cols), len(cols) * len(calculations[2])) * [('', ())])
+
+        # Calculate of values ​​for all keys
+        for x in keys:
+            # row and column number in the data table for the selected key
+            krow = row_dict[x[0]]
+            kcol = col_dict[x[1]]
+            # Perform all calculations for all keys.
+            for n, y in enumerate(calculation):
+                if calculations[1]:
+                    data[krow * len(calculations[1]) + n][krow] = [
+                        self.calculation.list[y][1](results[x][0]),
+                        results[x][1]]
+                elif calculations[2]:
+                    data[krow][kcol * len(calculations[2]) + n] = [
+                        self.calculation.list[y][1](results[x][0]),
+                        results[x][1]]
+                else:
+                    data[krow][kcol] = [
+                        self.calculation.list[y][1](results[x][0]),
+                        results[x][1]]
+
+        attributes = {}
+        for i in range(provider.fields().count()):
+            attributes[i] = provider.fields().at(i)
+
+        row_names = []
+        for x in selected_rows:
+            if x[0] == 'geometry':
+                row_names.append(x[1])
+            elif x[0] != 'calculation':
+                row_names.append(attributes[x[2]].name())
+        col_names = []
+        for x in selected_columns:
+            if x[0] == 'geometry':
+                col_names.append(x[1])
+            elif x[0] != 'calculation':
+                col_names.append(attributes[x[2]].name())
+
+        # Insert names of rows and columns with calculations.
+        calc_col_name = ()
+        calc_row_name = ()
+        if calculations[1]:
+            calc = [self.calculation.list[x][0] for x in calculations[1]]
+            _rows = [w + (o,) for w in rows for o in calc]
+            _cols = cols
+            calc_row_name = (QCoreApplication.translate(
+                'groupstats', 'Function'),)
+        elif calculations[2]:
+            calc = [self.calculation.list[x][0] for x in calculations[2]]
+            _cols = [w + (0,) for w in cols for o in calc]
+            _rows = rows
+            calc_col_name = (QCoreApplication.translate(
+                'groupstats', 'Function'),)
+        else:
+            _cols = cols
+            _rows = rows
+
+        if _rows and _rows[0]:
+            _rows.insert(0, tuple(row_names) + calc_row_name)
+        if _cols and _cols[0]:
+            _cols.insert(0, tuple(col_names) + calc_col_name)
+
+        if _rows and _cols:
+            self.ui.results.setUpdatesEnabled(False)
+            self.windowResult = ResultsModel(data, _rows, _cols, layer)
+            self.ui.results.setModel(self.windowResult)
+
+            for i in range(len(_cols), 0, -1):
+                self.ui.results.verticalHeader() \
+                    .setSortIndicator(i - 1, Qt.AscendingOrder)
+            for i in range(len(_rows), 0, -1):
+                self.io.results.horizontalHeader() \
+                    .setSortIndicator(i - 1, Qt.AscendingOrder)
+
+            message = self.statusBar().currentMessage()
+            percent_factor = 100 / self.windowResult.columnCount()
+            progress = 0
+
+            for i in range(self.windowResult.columnCount()):
+                self.ui.results.resizeColumnToContents(i)
+                progress += percent_factor
+                self.statusBar() \
+                    .showMessage(message + '{:.2f}'.format(progress))
+            self.ui.results.setUpdatesEnabled(True)
+
+            record = 'records'
+            if count_null == 1:
+                record = 'record'
+
+            if self.ui.useNULL.isChecked() and count_null:
+                null_text = QCoreApplication.translate(
+                    'groupstats', ' (used {} {} with null value in {} field)'
+                    .format(count_null, record, value[1]))
+            elif not self.ui.useNULL.isChecked() and count_null:
+                null_text = QCoreApplication.translate(
+                    'groupstats',
+                    ' (not used {} {} with null value in {} field)'
+                    .format(count_null, record, value[1]))
+            else:
+                null_text = ''
+            self.statusBar().showMessage(
+                message +
+                ' | ' +
+                QCoreApplication.translate('groupstats', 'done. ') +
+                null_text, 20000)
+        else:
+            try:
+                del self.windowResult
+            except AttributeError:
+                pass
 
     def showTutorial(self) -> None:
         """
