@@ -286,7 +286,7 @@ class ListModel(QAbstractListModel):
         """
         Dummy.
         """
-        pass
+        return 0
 
     def rowCountB(self) -> int:
         """
