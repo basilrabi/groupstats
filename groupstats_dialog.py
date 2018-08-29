@@ -302,7 +302,7 @@ class GroupStatsDialog(QMainWindow):
         del self.windowField
         # Insert field lists
 
-        self.windowField = FieldWindow()
+        self.windowField = FieldWindow(self)
         self.ui.fieldList.setModel(self.windowField)
         keys = ['calculation', 'geometry']
         for i in keys:
