@@ -67,6 +67,11 @@ class GroupStatsDialog(QMainWindow):
         self.ui.columns.setAcceptDrops(True)
         self.ui.values.setAcceptDrops(True)
 
+        self.ui.calculate.clicked.connect(self.showResult)
+        self.ui.clear.clicked.connect(self.clearSelection)
+        # self.ui.filterButton.clicked.connect(self.setFilter)
+        self.ui.layer.currentIndexChanged.connect(self.refreshFields)
+
         self.windowField = FieldWindow(self)    # tm1
         self.windowRow = ColRowWindow(self)     # tm2
         self.windowColumn = ColRowWindow(self)  # tm3
@@ -79,6 +84,10 @@ class GroupStatsDialog(QMainWindow):
         self.windowRow.setOtherModels(self.windowColumn, self.windowValue)
         self.windowColumn.setOtherModels(self.windowRow, self.windowValue)
         self.windowValue.setOtherModels(self.windowRow, self.windowColumn)
+
+        self.ui.actionTutorial.triggered.connect(self.showTutorial)
+
+
 
     def clearSelection(self) -> None:
         """
@@ -188,9 +197,9 @@ class GroupStatsDialog(QMainWindow):
         """
         blokujObliczenia
         """
-        columns = self.windowColumn.data
-        rows = self.windowRow.data
-        values = self.windowValue.data
+        columns = self.windowColumn.tab
+        rows = self.windowRow.tab
+        values = self.windowValue.tab
 
         # If there are numbers (attributes or geometry) in the value field and
         # some calculating function has been selected, enable calculate button.
@@ -405,9 +414,9 @@ class GroupStatsDialog(QMainWindow):
         pokazWynik
         """
         # Tuple[Tuple[str, str, int]]
-        selected_rows = tuple(self.windowRow.data)
-        selected_columns = tuple(self.windowColumn.data)
-        selected_ValCalc = tuple(self.windowValue.data)
+        selected_rows = tuple(self.windowRow.tab)
+        selected_columns = tuple(self.windowColumn.tab)
+        selected_ValCalc = tuple(self.windowValue.tab)
 
         # Reading a field that has been selected for calculation.
         # Only one is allowed.

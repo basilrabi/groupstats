@@ -191,11 +191,11 @@ class ListModel(QAbstractListModel):
             self, main_window: QObject,
             parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
-        self.data = []
+        self.tab = []
         self.main_window = main_window
         self.calculation = Calculation(self)
 
-    def cell(self, index: QModelIndex, role=Qt.DisplayRole) -> QIcon:
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> QIcon:
         """
         Returns data from the table cell?
 
@@ -207,13 +207,13 @@ class ListModel(QAbstractListModel):
         row = index.row()
 
         if role == Qt.DisplayRole:
-            return self.data[row][1]
+            return self.tab[row][1]
         elif role == Qt.DecorationRole:
-            if self.data[row][0] == 'geometry':
+            if self.tab[row][0] == 'geometry':
                 icon = QIcon(':/plugins/groupstats/icons/geom.png')
-            elif self.data[row][0] == 'calculation':
+            elif self.tab[row][0] == 'calculation':
                 icon = QIcon(':/plugins/groupstats/icons/calc.png')
-            elif self.data[row][0] == 'text':
+            elif self.tab[row][0] == 'text':
                 icon = QIcon(':/plugins/groupstats/icons/alpha.png')
             else:
                 icon = QIcon(':/plugins/groupstats/icons/digits.png')
@@ -245,7 +245,7 @@ class ListModel(QAbstractListModel):
         """
         self.beginInsertRows(index, row, row + number - 1)
         for n in range(number):
-            self.data.insert(row + n, data[n])
+            self.tab.insert(row + n, data[n])
         self.endInsertRows()
         return True
 
@@ -263,9 +263,9 @@ class ListModel(QAbstractListModel):
 
         for index in indices:
             row = index.row()
-            stream.writeBytes(self.data[row][0])
-            stream.writeBytes(self.data[row][1])
-            stream.writeInt16(self.data[row][2])
+            stream.writeBytes(self.tab[row][0])
+            stream.writeBytes(self.tab[row][1])
+            stream.writeInt16(self.tab[row][2])
 
         mimeData.setData(mimeType)
 
@@ -273,12 +273,12 @@ class ListModel(QAbstractListModel):
 
     def removeRows(self, row: int, number: int, index: QModelIndex) -> bool:
         """
-        Remove rows from self.data.
+        Remove rows from self.tab.
 
         removeRows
         """
         self.beginRemoveRows(index, row, row + number - 1)
-        del self.data[row:(row + number)]
+        del self.tab[row:(row + number)]
         self.endRemoveRows()
         return True
 
@@ -288,7 +288,7 @@ class ListModel(QAbstractListModel):
 
         rowCount
         """
-        return len(self.data)
+        return len(self.tab)
 
     def supportedDragActions(self) -> Qt.DropAction:
         """
@@ -353,9 +353,9 @@ class ValueWindow(ListModel):
             id = stream.readInt16()  # pylint: disable=W0622
             field = (stream_type, name, id)
             dataRC = self.modelRows + self.modelColumns
-            all_data = dataRC + self.data
+            all_data = dataRC + self.tab
 
-            if len(self.data) >= 2:
+            if len(self.tab) >= 2:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
@@ -373,8 +373,8 @@ class ValueWindow(ListModel):
                     ), 15000)
                 return False
 
-            elif len(self.data) == 1 and stream_type != 'calculation' and \
-                    self.data[0][0] != 'calculation':
+            elif len(self.tab) == 1 and stream_type != 'calculation' and \
+                    self.tab[0][0] != 'calculation':
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
@@ -383,11 +383,11 @@ class ValueWindow(ListModel):
                     ), 15000)
                 return False
 
-            elif len(self.data) == 1 and \
+            elif len(self.tab) == 1 and \
                     ((stream_type == 'text' and
-                      self.data[0][2] not in self.calculation.listText) or
+                      self.tab[0][2] not in self.calculation.listText) or
                      (id not in self.calculation.listText and
-                      self.data[0][0] == 'text')):
+                      self.tab[0][0] == 'text')):
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
@@ -431,8 +431,8 @@ class ValueWindow(ListModel):
 
         ustawInneModele
         """
-        self.modelRows = modelRows.data
-        self.modelColumns = modelColumns.data
+        self.modelRows = modelRows.tab
+        self.modelColumns = modelColumns.tab
 
 
 class ColRowWindow(ListModel):
@@ -485,7 +485,7 @@ class ColRowWindow(ListModel):
                     ), 15000)
                 return False
 
-            elif (field in self.modelRC or field in self.data) and \
+            elif (field in self.modelRC or field in self.tab) and \
                     mime_type in [mime_types['list'], mime_types['value']]:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
@@ -526,7 +526,7 @@ class ColRowWindow(ListModel):
 
         setData
         """
-        self.data.insert(index, value)
+        self.tab.insert(index, value)
 
     def setOtherModels(self, modelA: 'ColRowWindow',
                        modelB: ValueWindow) -> None:
@@ -535,8 +535,8 @@ class ColRowWindow(ListModel):
 
         ustawInneModele
         """
-        self.modelRC = modelA.data
-        self.modelValue = modelB.data
+        self.modelRC = modelA.tab
+        self.modelValue = modelB.tab
 
 
 class ResultsModel(QAbstractTableModel):
@@ -551,7 +551,7 @@ class ResultsModel(QAbstractTableModel):
             self, data: List, rows: List, columns: List, layer: QgsVectorLayer,
             parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
-        self.data = data
+        self.tab = data
         self.rows = rows
         self.columns = columns
         self.layer = layer
@@ -565,7 +565,7 @@ class ResultsModel(QAbstractTableModel):
             self.offsetY += 1
 
     # TODO: type hints for the following cases: Qt.DisplayRole and Qt.UserRole
-    def cell(self, index: QModelIndex,
+    def data(self, index: QModelIndex,
              role: Qt.ItemDataRole = Qt.DisplayRole) -> Union[
                  None, QBrush, QFont, Qt.AlignmentFlag, str]:
         """
@@ -582,7 +582,7 @@ class ResultsModel(QAbstractTableModel):
         if role == Qt.DisplayRole:
             # Table cell data
             if row >= 0 and column >= 0:
-                return self.data[row][column][0]
+                return self.tab[row][column][0]
             # Row descriptions?
             elif column < 0 and row >= 0 and self.rows[0]:
                 return self.rows[row + 1][column]
@@ -602,7 +602,7 @@ class ResultsModel(QAbstractTableModel):
 
         elif role == Qt.UserRole:
             if row >= 0 and column >= 0:
-                return self.data[row][column][1]
+                return self.tab[row][column][1]
 
         elif role == Qt.UserRole + 1:
             if row < 0 and column >= 0:
@@ -678,7 +678,7 @@ class ResultsModel(QAbstractTableModel):
         if column >= self.offsetX:
             # n : n-th row
             # d : data in row
-            for n, d in enumerate(self.data):
+            for n, d in enumerate(self.tab):
                 tmp.append((n, d[column - self.offsetX][0]))
         else:
             # Sort row names
@@ -706,23 +706,23 @@ class ResultsModel(QAbstractTableModel):
             tmp.reverse()
 
         # Temporarily store data
-        data2 = tuple(self.data)
+        data2 = tuple(self.tab)
         # Temporarily store row data
         rows2 = tuple(self.rows)
 
-        self.data = []
+        self.tab = []
         self.rows = []
         # Add row names only
         self.rows.append(rows2[0])
 
         # Arrange all data and row descriptions using the sorted list
         for i in tmp:
-            self.data.append(data2[i[0]])
+            self.tab.append(data2[i[0]])
             self.rows.append(rows2[i[0] + 1])
 
         # Data change signal
         top_left = self.createIndex(0, 0)
-        bottom_right = self.createIndex(self.rowCount(), self.columnCout())
+        bottom_right = self.createIndex(self.rowCount(), self.columnCount())
         self.dataChanged(top_left, bottom_right)
 
     def sortRow(self, row: int, descending: bool = False) -> None:
@@ -741,7 +741,7 @@ class ResultsModel(QAbstractTableModel):
         if row >= self.offsetY:
             # n : n-th column
             # d : data in row
-            for n, d in enumerate(self.data[row - self.offsetY]):
+            for n, d in enumerate(self.tab[row - self.offsetY]):
                 tmp.append((n, d[0]))
         else:
             # Sort column names
@@ -769,11 +769,11 @@ class ResultsModel(QAbstractTableModel):
             tmp.reverse()
 
         # Temporarily store data
-        data2 = tuple(self.data)
+        data2 = tuple(self.tab)
         # Temporarily store column data
         columns2 = tuple(self.columns)
 
-        self.data = []
+        self.tab = []
         self.columns = []
         # Add column names only
         self.columns.append(columns2[0])
@@ -783,7 +783,7 @@ class ResultsModel(QAbstractTableModel):
             row = []
             for i in tmp:
                 row.append(j[i[0]])
-            self.data.append(tuple(row))
+            self.tab.append(tuple(row))
 
         # Arrange column descriptuins using the sorted list
         for i in tmp:
