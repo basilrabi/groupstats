@@ -165,8 +165,8 @@ class GroupStatsDialog(QMainWindow):
         columns = []
 
         if not allData:
-            # If the 'only checked' option, download the indexes of the selected
-            # fields?
+            # If the 'only checked' option, download the indexes of the
+            # selected fields?
             indices = self.ui.results.selectedIndexes()
             if not indices:
                 QMessageBox.information(
@@ -529,7 +529,7 @@ class GroupStatsDialog(QMainWindow):
                 key = (tuple(key_row), tuple(key_col))
 
                 value_to_calculate = fun(f)
-                if not value_to_calculate is None or \
+                if value_to_calculate is not None or \
                         self.ui.useNULL.isChecked():
                     if value_to_calculate is None:
                         count_null += 1
@@ -582,7 +582,7 @@ class GroupStatsDialog(QMainWindow):
         calculations = [
             [x[2] for x in selected_ValCalc if x[0] == 'calculation'],
             [x[2] for x in selected_rows if x[0] == 'calculation'],
-            [x[2] for x in selected_columns if x[0] == 'calculation'],]
+            [x[2] for x in selected_columns if x[0] == 'calculation'], ]
 
         # Take only a non-empty part of the list to calculate.
         if calculations[0]:

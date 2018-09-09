@@ -562,7 +562,8 @@ class ResultsModel(QAbstractTableModel):
     # TODO: type hints for list: data, rows, columns
     def __init__(
             self,
-            data: List[Tuple], rows: List, columns: List, layer: QgsVectorLayer,
+            data: List[Tuple],
+            rows: List, columns: List, layer: QgsVectorLayer,
             parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.tab = data
@@ -596,7 +597,7 @@ class ResultsModel(QAbstractTableModel):
 
         return l
 
-     # TODO: type hints for the following cases: Qt.DisplayRole and Qt.UserRole
+    # TODO: type hints for the following cases: Qt.DisplayRole and Qt.UserRole
     def data(self, index: QModelIndex,
              role: Qt.ItemDataRole = Qt.DisplayRole) -> Union[
                  None, QBrush, QFont, Qt.AlignmentFlag, str]:

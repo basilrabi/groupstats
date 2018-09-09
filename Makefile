@@ -160,7 +160,7 @@ pylint:
 	@echo "-----------------"
 	@echo "Pylint violations"
 	@echo "-----------------"
-	@pylint --reports=n --rcfile=pylintrc . || true
+	@pylint-3 --reports=n --rcfile=pylintrc . || true
 	@echo
 	@echo "----------------------"
 	@echo "If you get a 'no module named qgis.core' error, try sourcing"
