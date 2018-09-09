@@ -34,7 +34,7 @@ from . import resources  # pylint: disable=W0611
 from .groupstats_dialog import GroupStatsDialog
 
 
-class GroupStats:
+class GroupStats(object):
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -194,9 +194,9 @@ class GroupStats:
         if (not layerList) or (not layers):
             QMessageBox.information(
                 None,
-                QCoreApplication.translate('groupstats', 'Information'),
+                QCoreApplication.translate('GroupStats', 'Information'),
                 QCoreApplication.translate(
-                    'groupstats', 'Vector layers not found.'
+                    'GroupStats', 'Vector layers not found.'
                 )
             )
             return

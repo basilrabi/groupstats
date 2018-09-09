@@ -151,8 +151,8 @@ class GroupStatsDialog(QMainWindow):
         if self.ui.results.model() is None:
             QMessageBox.information(
                 None,
-                QCoreApplication.translate('groupstats', 'Information'),
-                QCoreApplication.translate('groupstats',
+                QCoreApplication.translate('GroupStats', 'Information'),
+                QCoreApplication.translate('GroupStats',
                                            'No data to save/copy.')
             )
             return None, False
@@ -171,8 +171,8 @@ class GroupStatsDialog(QMainWindow):
             if not indices:
                 QMessageBox.information(
                     None,
-                    QCoreApplication.translate('groupstats', 'Information'),
-                    QCoreApplication.translate('groupstats',
+                    QCoreApplication.translate('GroupStats', 'Information'),
+                    QCoreApplication.translate('GroupStats',
                                                'No data selected.')
                 )
                 return None, False
@@ -279,11 +279,11 @@ class GroupStatsDialog(QMainWindow):
         elif layer.geometryType() == 1:
             # line
             fields['geometry'] = [
-                (QCoreApplication.translate('groupstats', 'Length'), 1)]
+                (QCoreApplication.translate('GroupStats', 'Length'), 1)]
         elif layer.geometryType() == 2:
             fields['geometry'] = [
-                (QCoreApplication.translate('groupstats', 'Perimeter'), 1),
-                (QCoreApplication.translate('groupstats', 'Area'), 2),
+                (QCoreApplication.translate('GroupStats', 'Perimeter'), 1),
+                (QCoreApplication.translate('GroupStats', 'Area'), 2),
             ]
 
         # Separate number fields and text fields of the layer
@@ -552,7 +552,7 @@ class GroupStatsDialog(QMainWindow):
                 progress += percent_factor
                 self.statusBar().showMessage(
                     QCoreApplication.translate(
-                        'groupstats', 'Calculate...'
+                        'GroupStats', 'Calculate...'
                     ) + '{:.2f}'.format(progress)
                 )
         self.statusBar().showMessage(
@@ -646,13 +646,13 @@ class GroupStatsDialog(QMainWindow):
             _rows = [w + (o,) for w in rows for o in calc]
             _cols = cols
             calc_row_name = (QCoreApplication.translate(
-                'groupstats', 'Function'),)
+                'GroupStats', 'Function'),)
         elif calculations[2]:
             calc = [self.calculation.list[x][0] for x in calculations[2]]
             _cols = [w + (o,) for w in cols for o in calc]
             _rows = rows
             calc_col_name = (QCoreApplication.translate(
-                'groupstats', 'Function'),)
+                'GroupStats', 'Function'),)
         else:
             _cols = cols
             _rows = rows
@@ -691,11 +691,11 @@ class GroupStatsDialog(QMainWindow):
 
             if self.ui.useNULL.isChecked() and count_null:
                 null_text = QCoreApplication.translate(
-                    'groupstats', ' (used {} {} with null value in {} field)'
+                    'GroupStats', ' (used {} {} with null value in {} field)'
                     .format(count_null, record, value[1]))
             elif not self.ui.useNULL.isChecked() and count_null:
                 null_text = QCoreApplication.translate(
-                    'groupstats',
+                    'GroupStats',
                     ' (not used {} {} with null value in {} field)'
                     .format(count_null, record, value[1]))
             else:
@@ -703,7 +703,7 @@ class GroupStatsDialog(QMainWindow):
             self.statusBar().showMessage(
                 message +
                 ' | ' +
-                QCoreApplication.translate('groupstats', 'done. ') +
+                QCoreApplication.translate('GroupStats', 'done. ') +
                 null_text, 20000)
         else:
             try:
@@ -712,7 +712,7 @@ class GroupStatsDialog(QMainWindow):
                 pass
 
             self.statusBar().showMessage(QCoreApplication.translate(
-                'groupstats', 'No data found.'), 10000)
+                'GroupStats', 'No data found.'), 10000)
 
     def showTutorial(self) -> None:
         """

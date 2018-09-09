@@ -371,7 +371,7 @@ class ValueWindow(ListModel):
             if len(self.tab) >= 2:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'Value field may contain a maximum of two entries.'
                     ), 15000)
                 return False
@@ -381,7 +381,7 @@ class ValueWindow(ListModel):
                     mime_type == mime_types['list']:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'Function can be droped in only one area.'
                     ), 15000)
                 return False
@@ -390,7 +390,7 @@ class ValueWindow(ListModel):
                     self.tab[0][0] != 'calculation':
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'One of the items in the Value field must be a '
                         'function.'
                     ), 15000)
@@ -403,7 +403,7 @@ class ValueWindow(ListModel):
                       self.tab[0][0] == 'text')):
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'For the text value, function can only be one of '
                         '{}.'.format(self.calculation.textName)
                     ), 15000)
@@ -414,7 +414,7 @@ class ValueWindow(ListModel):
                      x[2] not in self.calculation.listText]:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'For the text value function can only be one of '
                         '{}.'.format(self.calculation.textName)
                     ), 15000)
@@ -494,7 +494,7 @@ class ColRowWindow(ListModel):
                     mime_type == mime_types['list']:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'Function can be droped in only one area.'
                     ), 15000)
                 return False
@@ -503,7 +503,7 @@ class ColRowWindow(ListModel):
                     mime_type in [mime_types['list'], mime_types['value']]:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'This field has already been droped.'
                     ), 15000)
                 return False
@@ -513,7 +513,7 @@ class ColRowWindow(ListModel):
                     'text' in [x[0] for x in self.modelValue]:
                 self.main_window.statusBar() \
                     .showMessage(QCoreApplication.translate(
-                        'groupstats',
+                        'GroupStats',
                         'For the text value, function can only be one of '
                         '{}.'.format(self.calculation.textName)
                     ), 15000)
