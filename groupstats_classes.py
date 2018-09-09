@@ -59,32 +59,23 @@ class Calculation(QObject):
         # List of ID, name and calculation function
         self.list = {
             0: (QCoreApplication.translate(
-                'Calculation', 'count'
-            ), self.count),
+                'Calculation', 'count'), self.count),
             1: (QCoreApplication.translate(
-                'Calculation', 'sum'
-            ), self.sum),
+                'Calculation', 'sum'), self.sum),
             2: (QCoreApplication.translate(
-                'Calculation', 'mean'
-            ), self.mean),
+                'Calculation', 'mean'), self.mean),
             3: (QCoreApplication.translate(
-                'Calculation', 'variance'
-            ), self.variance),
+                'Calculation', 'variance'), self.variance),
             4: (QCoreApplication.translate(
-                'Calculation', 'standard_deviation'
-            ), self.standard_deviation),
+                'Calculation', 'standard deviation'), self.standard_deviation),
             5: (QCoreApplication.translate(
-                'Calculation', 'median'
-            ), self.median),
+                'Calculation', 'median'), self.median),
             6: (QCoreApplication.translate(
-                'Calculation', 'minimum'
-            ), self.minimum),
+                'Calculation', 'minimum'), self.minimum),
             7: (QCoreApplication.translate(
-                'Calculation', 'maximum'
-            ), self.maximum),
+                'Calculation', 'maximum'), self.maximum),
             8: (QCoreApplication.translate(
-                'Calculation', 'unique'
-            ),),
+                'Calculation', 'unique'), self.unique)
         }
         self.listText = (0, 8)
         self.textName = ''
@@ -195,7 +186,8 @@ class ListModel(QAbstractListModel):
         self.main_window = main_window
         self.calculation = Calculation(self)
 
-    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> QIcon:
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Union[
+            str, QIcon, None]:
         """
         Returns data from the table cell?
 
@@ -271,6 +263,12 @@ class ListModel(QAbstractListModel):
 
         return mimeData
 
+    def mimeTypes(self) -> List[str]:
+        """
+        mimeTypes
+        """
+        return [mime_types['list'], mime_types['colrow'], mime_types['value']]
+
     def removeRows(self, row: int, number: int, index: QModelIndex) -> bool:
         """
         Remove rows from self.tab.
@@ -282,7 +280,8 @@ class ListModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
-    def rowCount(self, parent=QModelIndex()) -> int:
+    # TODO: QModelIndex vs QModelIndex()
+    def rowCount(self, parent=QModelIndex()) -> int:  # pylint: disable=W0613
         """
         rowCount
         """
@@ -311,7 +310,21 @@ class FieldWindow(ListModel):
 
     ModelListaPol
     """
-    pass
+
+    def dropMimeData(
+            self, data: QMimeData, action: Qt.DropAction, row: int,
+            column: int, parent: QModelIndex) -> bool:
+        """
+        Not sure what is this about but I copied still.
+        """
+        # pylint: disable=W0613
+        return True
+
+    def removeRows(self, row: int, number: int, index: QModelIndex) -> bool:
+        """
+        Not sure what is this about but I copied still.
+        """
+        return True
 
 
 class ValueWindow(ListModel):
@@ -327,12 +340,14 @@ class ValueWindow(ListModel):
         self.modelColumns = None
 
     def dropMimeData(
-            self, mimeData: QMimeData, row: int, index: QModelIndex) -> bool:
+            self, mimeData: QMimeData, action: Qt.DropAction, row: int,
+            column: int, index: QModelIndex) -> bool:
         """
         Drop MIME data.
 
         dropMimeData
         """
+        # pylint: disable=W0613
         if mimeData.hasFormat(mime_types['list']):
             mime_type = mime_types['list']
         elif mimeData.hasFormat(mime_types['colrow']):
@@ -346,8 +361,8 @@ class ValueWindow(ListModel):
         stream = QDataStream(data, QIODevice.ReadOnly)
         data_set = []
         while not stream.atEnd():
-            stream_type = stream.readBytes()
-            name = stream.readBytes()
+            stream_type = stream.readBytes().decode('utf-8')
+            name = stream.readBytes().decode('utf-8')
             id = stream.readInt16()  # pylint: disable=W0622
             field = (stream_type, name, id)
             dataRC = self.modelRows + self.modelColumns
@@ -358,7 +373,7 @@ class ValueWindow(ListModel):
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
                         'Value field may contain a maximum of two entries.'
-                    ), 1500)
+                    ), 15000)
                 return False
 
             elif stream_type == 'calculation' and \
@@ -390,8 +405,8 @@ class ValueWindow(ListModel):
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
                         'For the text value, function can only be one of '
-                        '{self.calculation.textName}.'
-                    ))
+                        '{}.'.format(self.calculation.textName)
+                    ), 15000)
                 return False
 
             elif stream_type == 'text' and \
@@ -401,8 +416,8 @@ class ValueWindow(ListModel):
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
                         'For the text value function can only be one of '
-                        '{self.calculation.textName}.'
-                    ))
+                        '{}.'.format(self.calculation.textName)
+                    ), 15000)
                 return False
 
             data_set.append(field)
@@ -446,12 +461,14 @@ class ColRowWindow(ListModel):
         self.modelValue = None
 
     def dropMimeData(
-            self, mimeData: QMimeData, row: int, index: QModelIndex) -> bool:
+            self, mimeData: QMimeData, action: Qt.DropAction, row: int,
+            column: int, index: QModelIndex) -> bool:
         """
         Drop MIME data.
 
         dropMimeData
         """
+        # pylint: disable=W0613
         if mimeData.hasFormat(mime_types['list']):
             mime_type = mime_types['list']
         elif mimeData.hasFormat(mime_types['colrow']):
@@ -466,10 +483,9 @@ class ColRowWindow(ListModel):
         data_set = []
 
         while not stream.atEnd():
-            stream_type = stream.readBytes()
-            name = stream.readBytes()
+            stream_type = stream.readBytes().decode('utf-8')
+            name = stream.readBytes().decode('utf-8')
             id = stream.readInt16()  # pylint: disable=W0622
-            # TODO: stream_type and name might be needed to be decoded first
             field = (stream_type, name, id)
             modelRCV = self.modelRC + self.modelValue
 
@@ -499,7 +515,7 @@ class ColRowWindow(ListModel):
                     .showMessage(QCoreApplication.translate(
                         'groupstats',
                         'For the text value, function can only be one of '
-                        '{self.calculation.textName}.'
+                        '{}.'.format(self.calculation.textName)
                     ), 15000)
                 return False
 
@@ -546,7 +562,8 @@ class ResultsModel(QAbstractTableModel):
 
     # TODO: type hints for list: data, rows, columns
     def __init__(
-            self, data: List, rows: List, columns: List, layer: QgsVectorLayer,
+            self,
+            data: List[Tuple], rows: List, columns: List, layer: QgsVectorLayer,
             parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.tab = data
@@ -562,7 +579,24 @@ class ResultsModel(QAbstractTableModel):
         if rows[0] and columns[0]:
             self.offsetY += 1
 
-    # TODO: type hints for the following cases: Qt.DisplayRole and Qt.UserRole
+    def columnCount(self) -> int:
+        """
+        Count the number of columns?
+
+        columnCount
+        """
+        if self.rows[0] and self.columns[0]:
+            l = len(self.rows[0]) + len(self.columns[0]) - 1
+        elif self.rows[0] and not self.columns[0]:
+            l = len(self.rows[0]) + 1
+        elif not self.rows[0] and self.columns[0]:
+            l = len(self.columns[0])
+        else:
+            l = 2
+
+        return l
+
+     # TODO: type hints for the following cases: Qt.DisplayRole and Qt.UserRole
     def data(self, index: QModelIndex,
              role: Qt.ItemDataRole = Qt.DisplayRole) -> Union[
                  None, QBrush, QFont, Qt.AlignmentFlag, str]:
@@ -634,30 +668,13 @@ class ResultsModel(QAbstractTableModel):
 
         return None
 
-    def columnCount(self) -> int:
-        """
-        Count the number of columns?
-
-        columnCount
-        """
-        if self.rows[0] and self.columns[0]:
-            l = len(self.rows[0]) + len(self.columns[0])
-        elif self.rows[0] and not self.columns[0]:
-            l = len(self.rows[0]) + 1
-        elif not self.rows[0] and self.columns[0]:
-            l = len(self.columns[0])
-        else:
-            l = 2
-
-        return l
-
-    def rowCount(self, parent=QModelIndex()) -> int:
+    def rowCount(self, parent=QModelIndex()) -> int:  # pylint: disable=W0613
         """
         rowCount
         """
         return max(2, len(self.rows) + len(self.columns[0]))
 
-    def sortColumn(self, column: int, descending: bool = False) -> None:
+    def sort(self, column: int, descending: bool = False) -> None:
         """
         Sorts the table according to the selected column.
 
@@ -719,6 +736,8 @@ class ResultsModel(QAbstractTableModel):
         # Data change signal
         top_left = self.createIndex(0, 0)
         bottom_right = self.createIndex(self.rowCount(), self.columnCount())
+
+        # TODO: Confirm if signal is successfully emitted
         self.dataChanged(top_left, bottom_right)
 
     def sortRow(self, row: int, descending: bool = False) -> None:
@@ -788,6 +807,8 @@ class ResultsModel(QAbstractTableModel):
         # Data change signal
         top_left = self.createIndex(0, 0)
         bottom_right = self.createIndex(self.rowCount(), self.columnCount())
+
+        # TODO: Confirm if signal is successfully emitted
         self.dataChanged(top_left, bottom_right)
 
 
@@ -804,6 +825,22 @@ class ResultsWindow(QTableView):
         self.setObjectName('results')
         self.verticalHeader().setSortIndicatorShown(True)
         self.clicked.connect(self.checkAll)
+
+    def checkAll(self, index: QModelIndex) -> None:
+        """
+        Select or deselect all data after clicking on the corner of the table.
+
+        zaznaczWszystko
+        """
+        selected_cell_type = self.model().data(index, Qt.UserRole + 1)
+
+        # Check if the corner is celected
+        if selected_cell_type not in ['data', 'row', 'column']:
+            # If the corner is selected, mark all data
+            if self.selectionModel().isSelected(index):
+                self.selectAll()
+            else:
+                self.clearSelection()
 
     def selectionCommand(
             self, index: QModelIndex,
@@ -825,19 +862,3 @@ class ResultsWindow(QTableView):
         elif selected_cell_type == 'column':
             return flag | QItemSelectionModel.Columns
         return flag
-
-    def checkAll(self, index: QModelIndex) -> None:
-        """
-        Select or deselect all data after clicking on the corner of the table.
-
-        zaznaczWszystko
-        """
-        selected_cell_type = self.model().data(index, Qt.UserRole + 1)
-
-        # Check if the corner is celected
-        if selected_cell_type not in ['data', 'row', 'column']:
-            # If the corner is selected, mark all data
-            if self.selectionModel().isSelected(index):
-                self.selectAll()
-            else:
-                self.clearSelection()
