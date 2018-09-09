@@ -280,7 +280,6 @@ class ListModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
-    # TODO: QModelIndex vs QModelIndex()
     def rowCount(self, parent=QModelIndex()) -> int:  # pylint: disable=W0613
         """
         rowCount
@@ -737,8 +736,6 @@ class ResultsModel(QAbstractTableModel):
         # Data change signal
         top_left = self.createIndex(0, 0)
         bottom_right = self.createIndex(self.rowCount(), self.columnCount())
-
-        # TODO: Confirm if signal is successfully emitted
         self.dataChanged.emit(top_left, bottom_right)
 
     def sortRow(self, row: int, descending: bool = False) -> None:
@@ -808,8 +805,6 @@ class ResultsModel(QAbstractTableModel):
         # Data change signal
         top_left = self.createIndex(0, 0)
         bottom_right = self.createIndex(self.rowCount(), self.columnCount())
-
-        # TODO: Confirm if signal is successfully emitted
         self.dataChanged.emit(top_left, bottom_right)
 
 
