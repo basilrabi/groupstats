@@ -28,7 +28,7 @@ import webbrowser
 from typing import Any, List, Optional, Tuple, Union
 from qgis.core import QgsProject, QgsVectorLayer
 # from qgis.gui import QgsSearchQueryBuilder
-from qgis.PyQt.QtCore import QCoreApplication, QModelIndex, Qt
+from qgis.PyQt.QtCore import QCoreApplication, QModelIndex, QObject, Qt
 from qgis.PyQt.QtWidgets import (QApplication,
                                  QFileDialog,
                                  QMainWindow,
@@ -54,8 +54,8 @@ class GroupStatsDialog(QMainWindow):
     Plugin dialog.
     """
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, parent: Optional[QObject] = None) -> None:
+        super().__init__(parent=parent)
         self.ui = Ui_GroupStatsDialog()
         self.ui.setupUi(self)
         self.ui.results = ResultsWindow(self.ui.centralwidget)
@@ -109,13 +109,12 @@ class GroupStatsDialog(QMainWindow):
 
         wyczyscWybor
         """
-        self.windowRow.removeRows(0, self.windowRow.rowCount(), QModelIndex())
-        self.windowColumn.removeRows(0,
-                                     self.windowColumn.rowCount(),
-                                     QModelIndex())
-        self.windowValue.removeRows(0,
-                                    self.windowValue.rowCount(),
-                                    QModelIndex())
+        self.windowRow.removeRows(
+            0, self.windowRow.rowCount(), QModelIndex())
+        self.windowColumn.removeRows(
+            0, self.windowColumn.rowCount(), QModelIndex())
+        self.windowValue.removeRows(
+            0, self.windowValue.rowCount(), QModelIndex())
         self.ui.filter.setPlainText('')
 
     def copy(self) -> None:
@@ -149,7 +148,7 @@ class GroupStatsDialog(QMainWindow):
 
         pobierzDaneZTabeli
         """
-        if not self.ui.results.model():
+        if self.ui.results.model() is None:
             QMessageBox.information(
                 None,
                 QCoreApplication.translate('groupstats', 'Information'),
@@ -207,10 +206,14 @@ class GroupStatsDialog(QMainWindow):
 
         return data, True
 
-    def enableCalculations(self) -> None:
+    # TODO: test if the arguments are not needed
+    def enableCalculations(self, x, y, z) -> None:
         """
+        Not sure what are three arguments for, may be to accept the signals.
+
         blokujObliczenia
         """
+        # pylint: disable=W0613
         columns = self.windowColumn.tab
         rows = self.windowRow.tab
         values = self.windowValue.tab
@@ -276,8 +279,7 @@ class GroupStatsDialog(QMainWindow):
         elif layer.geometryType() == 1:
             # line
             fields['geometry'] = [
-                (QCoreApplication.translate('groupstats', 'Length'), 1),
-            ]
+                (QCoreApplication.translate('groupstats', 'Length'), 1)]
         elif layer.geometryType() == 2:
             fields['geometry'] = [
                 (QCoreApplication.translate('groupstats', 'Perimeter'), 1),
@@ -411,7 +413,7 @@ class GroupStatsDialog(QMainWindow):
         for i in indices:
             # Get indices of objects to show
             data = i.data(Qt.UserRole)
-            if not data:
+            if data is None:
                 # Reject rows with headings?
                 data = ()
             for j in data:
@@ -460,7 +462,7 @@ class GroupStatsDialog(QMainWindow):
         layer_id = self.ui.layer.itemData(index)
         layer = QgsProject.instance().mapLayer(layer_id)
 
-        selected_features_id = layer.selectedFeaturesIds()
+        selected_features_id = layer.selectedFeatureIds()
         only_selected = self.ui.onlySelected.isChecked()
 
         tmp_layer = QgsVectorLayer(layer.source(),
@@ -492,7 +494,8 @@ class GroupStatsDialog(QMainWindow):
         count_null = 0
 
         for f in features:
-            if not only_selected or f.id() in selected_features_id:
+            if not only_selected or \
+                    (only_selected and f.id() in selected_features_id):
                 key_col = []
                 key_row = []
                 key = ()
@@ -504,10 +507,10 @@ class GroupStatsDialog(QMainWindow):
                         elif k[2] == 2:
                             key_col.append(f.geometry().area())
                     elif k[0] in ['text', 'number']:
-                        if f.attribute(k[1]):
-                            new_key_kol = f.attribute(k[1])
-                        else:
+                        if f.attribute(k[1]) is None:
                             new_key_kol = ''
+                        else:
+                            new_key_kol = f.attribute(k[1])
                         key_col.append(new_key_kol)
 
                 for k in selected_rows:
@@ -517,17 +520,18 @@ class GroupStatsDialog(QMainWindow):
                         elif k[2] == 2:
                             key_row.append(f.geometry().area())
                     elif k[0] in ['text', 'number']:
-                        if f.attribute(k[1]):
-                            new_key_row = f.attribute(k[1])
-                        else:
+                        if f.attribute(k[1]) is None:
                             new_key_row = ''
+                        else:
+                            new_key_row = f.attribute(k[1])
                         key_row.append(new_key_row)
 
                 key = (tuple(key_row), tuple(key_col))
 
                 value_to_calculate = fun(f)
-                if value_to_calculate or self.ui.useNULL.isChecked():
-                    if not value_to_calculate:
+                if not value_to_calculate is None or \
+                        self.ui.useNULL.isChecked():
+                    if value_to_calculate is None:
                         count_null += 1
                         if value[0] == 'number':
                             value_to_calculate = 0
@@ -537,7 +541,7 @@ class GroupStatsDialog(QMainWindow):
                         results[key][0].append(value_to_calculate)
                     # If the key does not exist then a new list is created.
                     else:
-                        results[key] = [[value_to_calculate]]
+                        results[key] = [[value_to_calculate], []]
 
                     results[key][1].append(f.id())
 
@@ -548,7 +552,7 @@ class GroupStatsDialog(QMainWindow):
                 progress += percent_factor
                 self.statusBar().showMessage(
                     QCoreApplication.translate(
-                        'groupstats', 'Calculating...'
+                        'groupstats', 'Calculate...'
                     ) + '{:.2f}'.format(progress)
                 )
         self.statusBar().showMessage(
@@ -578,7 +582,7 @@ class GroupStatsDialog(QMainWindow):
         calculations = [
             [x[2] for x in selected_ValCalc if x[0] == 'calculation'],
             [x[2] for x in selected_rows if x[0] == 'calculation'],
-            [x[2] for x in selected_columns if x[0] == 'calculation'], ]
+            [x[2] for x in selected_columns if x[0] == 'calculation'],]
 
         # Take only a non-empty part of the list to calculate.
         if calculations[0]:
@@ -601,6 +605,9 @@ class GroupStatsDialog(QMainWindow):
             kcol = col_dict[x[1]]
             # Perform all calculations for all keys.
             for n, y in enumerate(calculation):
+                # At the right side of the equation is a list of 2:
+                # 1. Resulting computation
+                # 2. A list of feature ID's used in the computation
                 if calculations[1]:
                     data[krow * len(calculations[1]) + n][krow] = [
                         self.calculation.list[y][1](results[x][0]),
@@ -642,7 +649,7 @@ class GroupStatsDialog(QMainWindow):
                 'groupstats', 'Function'),)
         elif calculations[2]:
             calc = [self.calculation.list[x][0] for x in calculations[2]]
-            _cols = [w + (0,) for w in cols for o in calc]
+            _cols = [w + (o,) for w in cols for o in calc]
             _rows = rows
             calc_col_name = (QCoreApplication.translate(
                 'groupstats', 'Function'),)
@@ -660,11 +667,11 @@ class GroupStatsDialog(QMainWindow):
             self.windowResult = ResultsModel(data, _rows, _cols, layer)
             self.ui.results.setModel(self.windowResult)
 
-            for i in range(len(_cols), 0, -1):
+            for i in range(len(_cols[0]), 0, -1):
                 self.ui.results.verticalHeader() \
                     .setSortIndicator(i - 1, Qt.AscendingOrder)
-            for i in range(len(_rows), 0, -1):
-                self.io.results.horizontalHeader() \
+            for i in range(len(_rows[0]), 0, -1):
+                self.ui.results.horizontalHeader() \
                     .setSortIndicator(i - 1, Qt.AscendingOrder)
 
             message = self.statusBar().currentMessage()
@@ -704,6 +711,9 @@ class GroupStatsDialog(QMainWindow):
             except AttributeError:
                 pass
 
+            self.statusBar().showMessage(QCoreApplication.translate(
+                'groupstats', 'No data found.'), 10000)
+
     def showTutorial(self) -> None:
         """
         Open tutorial link.
@@ -715,6 +725,6 @@ class GroupStatsDialog(QMainWindow):
 
     def sortRow(self, row: int, descending: bool) -> None:
         """
-        ???
+        sortRows
         """
         self.ui.results.model().sortRow(row, descending)

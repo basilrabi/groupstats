@@ -579,12 +579,13 @@ class ResultsModel(QAbstractTableModel):
         if rows[0] and columns[0]:
             self.offsetY += 1
 
-    def columnCount(self) -> int:
+    def columnCount(self, parent=QModelIndex()) -> int:
         """
         Count the number of columns?
 
         columnCount
         """
+        # pylint: disable=W0613
         if self.rows[0] and self.columns[0]:
             l = len(self.rows[0]) + len(self.columns[0]) - 1
         elif self.rows[0] and not self.columns[0]:
@@ -738,7 +739,7 @@ class ResultsModel(QAbstractTableModel):
         bottom_right = self.createIndex(self.rowCount(), self.columnCount())
 
         # TODO: Confirm if signal is successfully emitted
-        self.dataChanged(top_left, bottom_right)
+        self.dataChanged.emit(top_left, bottom_right)
 
     def sortRow(self, row: int, descending: bool = False) -> None:
         """
@@ -809,7 +810,7 @@ class ResultsModel(QAbstractTableModel):
         bottom_right = self.createIndex(self.rowCount(), self.columnCount())
 
         # TODO: Confirm if signal is successfully emitted
-        self.dataChanged(top_left, bottom_right)
+        self.dataChanged.emit(top_left, bottom_right)
 
 
 class ResultsWindow(QTableView):
