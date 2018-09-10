@@ -715,7 +715,11 @@ class ResultsModel(QAbstractTableModel):
                     tmp.append((n, d[column]))
 
         # Sort ascending
-        tmp.sort(key=lambda x: x[1])
+        try:
+            tmp.sort(key=lambda x: x[1])
+        except TypeError:
+            print('Cannot sort column with empty cell.')
+            return
         if descending:
             # Sort descending
             tmp.reverse()
@@ -778,7 +782,11 @@ class ResultsModel(QAbstractTableModel):
                     tmp.append((n, d[row]))
 
         # Sort ascending
-        tmp.sort(key=lambda x: x[1])
+        try:
+            tmp.sort(key=lambda x: x[1])
+        except TypeError:
+            print('Cannot sort row with empty cell.')
+            return
         if descending:
             # Sort descending
             tmp.reverse()
