@@ -609,7 +609,7 @@ class GroupStatsDialog(QMainWindow):
                 # 1. Resulting computation
                 # 2. A list of feature ID's used in the computation
                 if calculations[1]:
-                    data[krow * len(calculations[1]) + n][krow] = [
+                    data[krow * len(calculations[1]) + n][kcol] = [
                         self.calculation.list[y][1](results[x][0]),
                         results[x][1]]
                 elif calculations[2]:

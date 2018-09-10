@@ -559,11 +559,12 @@ class ResultsModel(QAbstractTableModel):
     ModelWyniki
     """
 
-    # TODO: type hints for list: data, rows, columns
     def __init__(
             self,
             data: List[Tuple],
-            rows: List, columns: List, layer: QgsVectorLayer,
+            rows: List[Tuple],
+            columns: List[Tuple],
+            layer: QgsVectorLayer,
             parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self.tab = data
@@ -587,11 +588,11 @@ class ResultsModel(QAbstractTableModel):
         """
         # pylint: disable=W0613
         if self.rows[0] and self.columns[0]:
-            l = len(self.rows[0]) + len(self.columns[0]) - 1
+            l = len(self.columns) + len(self.rows[0]) - 1
         elif self.rows[0] and not self.columns[0]:
             l = len(self.rows[0]) + 1
         elif not self.rows[0] and self.columns[0]:
-            l = len(self.columns[0])
+            l = len(self.columns)
         else:
             l = 2
 
