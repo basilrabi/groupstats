@@ -1,6 +1,6 @@
 [general]
 name=Group Statistics
-qgisMinimumVersion=3.3
+qgisMinimumVersion=3.2
 description=Summary statistics for vector layers data
 version=0.1
 author=Basil Eric Rabi
