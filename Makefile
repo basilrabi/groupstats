@@ -64,7 +64,7 @@ compile : $(COMPILED_RESOURCE_FILES) $(COMPILED_UI_FILES)
 %.qm : %.ts
 	$(LRELEASE) $<
 
-deploy : compile doc transcompile
+deploy : compile transcompile
 	@echo
 	@echo "------------------------------------------------"
 	@echo "Deploying plugin to your qgis3 plugin directory."

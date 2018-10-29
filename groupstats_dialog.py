@@ -107,8 +107,6 @@ class GroupStatsDialog(QMainWindow):
     def clearSelection(self) -> None:
         """
         Clears windows with selected rows, columns and values.
-
-        wyczyscWybor
         """
         self.windowRow.removeRows(
             0, self.windowRow.rowCount(), QModelIndex())
@@ -121,8 +119,6 @@ class GroupStatsDialog(QMainWindow):
     def copy(self) -> None:
         """
         Copy all data to clipboard.
-
-        kopiowanie
         """
         text, success = self.download(formatText=True)
         if success:
@@ -132,8 +128,6 @@ class GroupStatsDialog(QMainWindow):
     def copySelected(self) -> None:
         """
         Copy selected data to clipboard.
-
-        kopiowanieZaznaczonych
         """
         text, success = self.download(allData=False, formatText=True)
         if success:
@@ -146,8 +140,6 @@ class GroupStatsDialog(QMainWindow):
                      Union[None, str, List[List[Any]]], bool]:
         """
         Download data from the results table.
-
-        pobierzDaneZTabeli
         """
         if self.ui.results.model() is None:
             QMessageBox.information(
@@ -209,9 +201,7 @@ class GroupStatsDialog(QMainWindow):
 
     def enableCalculations(self) -> None:
         """
-        Not sure what are three arguments for, may be to accept the signals.
-
-        blokujObliczenia
+        Enable calculation.
         """
         columns = self.windowColumn.tab
         rows = self.windowRow.tab
@@ -234,8 +224,6 @@ class GroupStatsDialog(QMainWindow):
     def exportCSV(self) -> None:
         """
         Save all data to a csv file.
-
-        eksportCSV
         """
         data, success = self.download()
         if success:
@@ -244,8 +232,6 @@ class GroupStatsDialog(QMainWindow):
     def exportCSVSelected(self) -> None:
         """
         Save selected data to a csv file.
-
-        eksportCSVZaznaczonych
         """
         data, success = self.download(allData=False)
         if success:
@@ -255,8 +241,6 @@ class GroupStatsDialog(QMainWindow):
         """
         Run after selecting a layer from the list. Sets a new list of fields to
         choose from and deletes windows with already selected fields.
-
-        wyborWarstwy
         """
         # Get ID of the selected layer
         layer_id = self.ui.layer.itemData(index)
@@ -327,8 +311,6 @@ class GroupStatsDialog(QMainWindow):
     def saveDataToFile(self, data: List[List[Any]]) -> None:
         """
         Write data to a  file.
-
-        zapiszDaneWPliku
         """
         file_window = QFileDialog()
         file_window.setAcceptMode(1)
@@ -364,8 +346,6 @@ class GroupStatsDialog(QMainWindow):
     def setLayers(self, layers: List[Tuple[str, str]]) -> None:
         """
         Adds the available qgis layers to the window.
-
-        ustawWarstwy
         """
         index = self.ui.layer.currentIndex()
 
@@ -394,16 +374,12 @@ class GroupStatsDialog(QMainWindow):
     def showControlPanel(self) -> None:
         """
         Display control panel.
-
-        pokazPanelSterowania
         """
         self.ui.controlPanel.setVisible(True)
 
     def showOnMap(self) -> None:
         """
         Show selected features on map canvas.
-
-        pokazNaMapie
         """
         # Get index of seletected fields
         indices = self.ui.results.selectedIndexes()
@@ -429,8 +405,6 @@ class GroupStatsDialog(QMainWindow):
     def showResult(self):
         """
         Perform calculations and send them to display.
-
-        pokazWynik
         """
         # Tuple[Tuple[str, str, int]]
         selected_rows = tuple(self.windowRow.tab)
@@ -716,8 +690,6 @@ class GroupStatsDialog(QMainWindow):
     def showTutorial(self) -> None:
         """
         Open tutorial link.
-
-        pokazTutorial
         """
         url = 'http://underdark.wordpress.com/2013/02/02/group-stats-tutorial/'
         webbrowser.open_new_tab(url)

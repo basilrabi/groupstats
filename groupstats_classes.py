@@ -51,8 +51,6 @@ mime_types = {
 class Calculation(QObject):
     """
     A class containing functions that perform statistical computations.
-
-    Obliczenia
     """
 
     def __init__(self, parent: QObject) -> None:
@@ -87,32 +85,24 @@ class Calculation(QObject):
     def count(self, result: list) -> int:
         """
         Number of matching rows.
-
-        liczebnosc
         """
         return len(result)
 
     def maximum(self, result: list) -> Union[float, int]:
         """
         Maximum value in the result.
-
-        maksimum
         """
         return max(result)
 
     def mean(self, result: list) -> float:
         """
         Average of the given set of results.
-
-        srednia
         """
         return self.sum(result) / self.count(result)
 
     def median(self, result: list) -> Union[float, int]:
         """
         Median of values.
-
-        mediana
         """
         result.sort()
         count = self.count(result)
@@ -130,40 +120,30 @@ class Calculation(QObject):
     def minimum(self, result: list) -> Union[float, int]:
         """
         Minimum value in the result.
-
-        minimum
         """
         return min(result)
 
     def standard_deviation(self, result: list) -> float:
         """
         Population's standard deviation.
-
-        odchylenie
         """
         return sqrt(self.variance(result))
 
     def sum(self, result: list) -> Union[float, int]:
         """
         Summation of results.
-
-        suma
         """
         return sum(result)
 
     def unique(self, result: list) -> int:
         """
         Number of unqie values.
-
-        unikalne
         """
         return len(set(result))
 
     def variance(self, result: list) -> Union[float, int]:
         """
         Population's variance.
-
-        wariancja
         """
         variance = 0
         for x in result:
@@ -175,8 +155,6 @@ class ListModel(QAbstractListModel):
     """
     A window with attribute list.
     Data stored in the list: [(attribute type, name, id), ...]
-
-    ModelList
     """
 
     def __init__(
@@ -191,8 +169,6 @@ class ListModel(QAbstractListModel):
             str, QIcon, None]:
         """
         Returns data from the table cell?
-
-        data
         """
         if not index.isValid() or not 0 <= index.row() < self.rowCount():
             return None
@@ -217,8 +193,6 @@ class ListModel(QAbstractListModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlags:
         """
         Item flags.
-
-        flags
         """
         flags = super().flags(index)
         if index.isValid():
@@ -233,8 +207,6 @@ class ListModel(QAbstractListModel):
             data: List[Tuple[str, str, int]]) -> bool:
         """
         Insert field list.
-
-        insertRows
         """
         self.beginInsertRows(index, row, row + number - 1)
         for n in range(number):
@@ -247,8 +219,6 @@ class ListModel(QAbstractListModel):
             mimeType: str = mime_types['list']) -> QMimeData:
         """
         MIME data.
-
-        mimeData
         """
         mimeData = QMimeData()
         data = QByteArray()
@@ -273,8 +243,6 @@ class ListModel(QAbstractListModel):
     def removeRows(self, row: int, number: int, index: QModelIndex) -> bool:
         """
         Remove rows from self.tab.
-
-        removeRows
         """
         self.beginRemoveRows(index, row, row + number - 1)
         del self.tab[row:(row + number)]
@@ -290,16 +258,12 @@ class ListModel(QAbstractListModel):
     def supportedDragActions(self) -> Qt.DropAction:
         """
         Drag actions.
-
-        supportedDragActions
         """
         return Qt.MoveAction
 
     def supportedDropActions(self) -> Qt.DropAction:
         """
         Drop actions
-
-        supportedDropActions
         """
         return Qt.MoveAction
 
@@ -307,22 +271,20 @@ class ListModel(QAbstractListModel):
 class FieldWindow(ListModel):
     """
     Model for a window with a list of available fields.
-
-    ModelListaPol
     """
 
     def dropMimeData(
             self, data: QMimeData, action: Qt.DropAction, row: int,
             column: int, parent: QModelIndex) -> bool:
         """
-        Not sure what is this about but I copied still.
+        Not sure what is this about but copied still.
         """
         # pylint: disable=W0613
         return True
 
     def removeRows(self, row: int, number: int, index: QModelIndex) -> bool:
         """
-        Not sure what is this about but I copied still.
+        Not sure what is this about but copied still.
         """
         return True
 
@@ -330,8 +292,6 @@ class FieldWindow(ListModel):
 class ValueWindow(ListModel):
     """
     A model for a window with values ​​to be calculated.
-
-    ModelWartosci
     """
 
     def __init__(self, parent: Optional[QObject] = None) -> None:
@@ -344,8 +304,6 @@ class ValueWindow(ListModel):
             column: int, index: QModelIndex) -> bool:
         """
         Drop MIME data.
-
-        dropMimeData
         """
         # pylint: disable=W0613
         if mimeData.hasFormat(mime_types['list']):
@@ -429,8 +387,6 @@ class ValueWindow(ListModel):
             self, indices: Union[QModelIndex, List[QModelIndex]]) -> QMimeData:
         """
         MIME data
-
-        mimeData
         """
         # pylint: disable=W0221
         return super().mimeData(indices, mime_types['value'])
@@ -441,8 +397,6 @@ class ValueWindow(ListModel):
             modelColumns: 'ColRowWindow') -> None:
         """
         Set data for other models.
-
-        ustawInneModele
         """
         self.modelRows = modelRows.tab
         self.modelColumns = modelColumns.tab
@@ -451,8 +405,6 @@ class ValueWindow(ListModel):
 class ColRowWindow(ListModel):
     """
     Model for windows with field lists for rows and columns.
-
-    ModelWiK
     """
 
     def __init__(self, parent: QObject) -> None:
@@ -465,8 +417,6 @@ class ColRowWindow(ListModel):
             column: int, index: QModelIndex) -> bool:
         """
         Drop MIME data.
-
-        dropMimeData
         """
         # pylint: disable=W0613
         if mimeData.hasFormat(mime_types['list']):
@@ -528,8 +478,6 @@ class ColRowWindow(ListModel):
             self, indices: Union[QModelIndex, List[QModelIndex]]) -> QMimeData:
         """
         MIME data.
-
-        mimeData
         """
         # pylint: disable=W0221
         return super().mimeData(indices, mime_types['colrow'])
@@ -537,8 +485,6 @@ class ColRowWindow(ListModel):
     def setData(self, index: int, value: list) -> None:
         """
         Sets data.
-
-        setData
         """
         self.tab.insert(index, value)
 
@@ -546,8 +492,6 @@ class ColRowWindow(ListModel):
                        modelB: ValueWindow) -> None:
         """
         Set data for other models.
-
-        ustawInneModele
         """
         self.modelRC = modelA.tab
         self.modelValue = modelB.tab
@@ -556,8 +500,6 @@ class ColRowWindow(ListModel):
 class ResultsModel(QAbstractTableModel):
     """
     Model for the window with the results of calculations.
-
-    ModelWyniki
     """
 
     def __init__(
@@ -584,8 +526,6 @@ class ResultsModel(QAbstractTableModel):
     def columnCount(self, parent=QModelIndex()) -> int:
         """
         Count the number of columns?
-
-        columnCount
         """
         # pylint: disable=W0613
         if self.rows[0] and self.columns[0]:
@@ -605,8 +545,6 @@ class ResultsModel(QAbstractTableModel):
                  None, QBrush, QFont, Qt.AlignmentFlag, str]:
         """
         Returns data from the table cell?
-
-        data
         """
         if not index.isValid() or not 0 <= index.row() < self.rowCount():
             return None
@@ -673,15 +611,13 @@ class ResultsModel(QAbstractTableModel):
 
     def rowCount(self, parent=QModelIndex()) -> int:  # pylint: disable=W0613
         """
-        rowCount
+        Row count
         """
         return max(2, len(self.rows) + len(self.columns[0]))
 
     def sort(self, column: int, descending: bool = False) -> None:
         """
         Sorts the table according to the selected column.
-
-        sort
         """
         if len(self.rows) == 1:
             return
@@ -748,8 +684,6 @@ class ResultsModel(QAbstractTableModel):
     def sortRow(self, row: int, descending: bool = False) -> None:
         """
         Sorts the table according to the selected row.
-
-        sortRows
         """
         if len(self.columns) == 1:
             return
@@ -822,8 +756,6 @@ class ResultsModel(QAbstractTableModel):
 class ResultsWindow(QTableView):
     """
     Window with calculation results.
-
-    OknoWyniki
     """
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -836,8 +768,6 @@ class ResultsWindow(QTableView):
     def checkAll(self, index: QModelIndex) -> None:
         """
         Select or deselect all data after clicking on the corner of the table.
-
-        zaznaczWszystko
         """
         selected_cell_type = self.model().data(index, Qt.UserRole + 1)
 
@@ -856,8 +786,6 @@ class ResultsWindow(QTableView):
         """
         Adds selection of entire rows and columns when the table header is
         selected.
-
-        selectionCommand
         """
         # http://doc.qt.io/qt-5/qabstractitemview.html#selectionCommand
         # http://doc.qt.io/qt-5/qitemselectionmodel.html#SelectionFlag-enum
